@@ -1,0 +1,20 @@
+{
+  "name": "linguaflow",
+  "version": "0.0.1",
+  "private": true,
+  "description": "LinguaFlow — AI-assisted English vocabulary learning system",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm --filter '@linguaflow/shared-types' build && pnpm --parallel --filter './apps/*' build",
+    "lint": "pnpm --recursive lint",
+    "test": "pnpm --recursive test",
+    "test:e2e": "pnpm --filter '@linguaflow/backend' test:e2e"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

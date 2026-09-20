@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "incremental": true,
+    "composite": true,
+    "paths": {
+      "@linguaflow/shared-types": ["./packages/shared-types/src/index.ts"],
+      "@linguaflow/shared-types/*": ["./packages/shared-types/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build"]
+}
