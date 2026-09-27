@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Done: `refactor(frontend)` — Migrated `LoginPage` from custom CSS to Mantine UI components (`LoginPage.tsx`, `LoginPage.css`).
 - Done: `refactor(frontend)` — Migrated `LandingPage` from custom CSS to Mantine UI components and Tabler icons (`LandingPage.tsx`, `LandingPage.css`).
 - Done: `chore(agents)` — Updated `frontend-design` skill with anti-cliché guidelines and token consistency rules (`frontend-design/SKILL.md`).
 
