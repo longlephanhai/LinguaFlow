@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Done: `feat(frontend)` — Added RegisterPage (sign-up) layout with routing support via react-router-dom (`RegisterPage.tsx`, `RegisterPage.css`, `App.tsx`).
 - Done: `feat(frontend)` — Added LoginPage layout with routing support via react-router-dom (`LoginPage.tsx`, `LoginPage.css`, `App.tsx`).
 - Done: `feat(frontend)` — Initial landing page layout with hero section and interactive contextual AI lookup demo (`LandingPage.tsx`).
 - Done: Design tokens and typography setup in `index.css` (Space Grotesk & Inter, color tokens, shadow scales).
