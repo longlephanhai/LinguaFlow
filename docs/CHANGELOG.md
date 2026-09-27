@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Done: `chore(backend)` — Initialized NestJS backend project with ESM and Vitest, added `.env`, `.env.example`, and `.gitignore` (`backend/`).
+- Done: `chore(backend)` — Initialized NestJS backend project with ESM and Vitest, added `.env`, `.env.example`, `.gitignore`, and `npm run dev` script (`backend/`).
 - Done: `feat(frontend)` — Added FlashcardPage (Flashcard Review) with progressive reveal, sentence context highlighting, and SM-2 readiness (`FlashcardPage.tsx`, `App.tsx`).
 - Done: `feat(frontend)` — Added VocabularyPage (Vocabulary Manager) with search, filter, status tags, table view, and empty states (`VocabularyPage.tsx`, `App.tsx`).
 - Done: `feat(frontend)` — Added AppLayout with Mantine AppShell (responsive sidebar & dark mode toggle), DashboardPage, and post-auth redirects (`AppLayout.tsx`, `DashboardPage.tsx`, `App.tsx`, `LoginPage.tsx`, `RegisterPage.tsx`).
