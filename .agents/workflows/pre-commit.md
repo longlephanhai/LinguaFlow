@@ -1,5 +1,5 @@
 ---
-description: # Pre-Commit Check & Commit Workflow
+description: Pre-Commit Check & Commit Workflow
 ---
 
 Execute quality checks and commit staged changes.
