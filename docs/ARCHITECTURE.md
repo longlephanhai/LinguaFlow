@@ -40,14 +40,15 @@ linguaflow/
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
-│       ├── auth/
-│       ├── vocabulary/
-│       ├── review/
-│       ├── quiz/
-│       ├── chat/
-│       ├── writing/
-│       ├── dashboard/
-│       └── ai/              # AiModule — Gemini wrapper, provider-agnostic
+│       └── modules/
+│           ├── auth/
+│           ├── vocabulary/
+│           ├── review/
+│           ├── quiz/
+│           ├── chat/
+│           ├── writing/
+│           ├── dashboard/
+│           └── ai/          # AiModule — Gemini wrapper, provider-agnostic
 ├── frontend/            # React + Vite — standalone Node project
 │   ├── package.json
 │   ├── tsconfig.json

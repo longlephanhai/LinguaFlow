@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Done: `chore(backend)` — Created `modules/` directory in backend `src` and updated architecture layout doc (`backend/src/modules/`, `ARCHITECTURE.md`).
 - Done: `feat(backend)` — Configured Mongoose with `@nestjs/mongoose` and `@nestjs/config` using `MONGODB_URI` (`app.module.ts`, `package.json`).
 - Done: `chore(backend)` — Initialized NestJS backend project with ESM and Vitest, added `.env`, `.env.example`, `.gitignore`, and `npm run dev` script (`backend/`).
 - Done: `feat(frontend)` — Added FlashcardPage (Flashcard Review) with progressive reveal, sentence context highlighting, and SM-2 readiness (`FlashcardPage.tsx`, `App.tsx`).
