@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Done: `feat(frontend)` — Added FlashcardPage (Flashcard Review) with progressive reveal, sentence context highlighting, and SM-2 readiness (`FlashcardPage.tsx`, `App.tsx`).
 - Done: `feat(frontend)` — Added VocabularyPage (Vocabulary Manager) with search, filter, status tags, table view, and empty states (`VocabularyPage.tsx`, `App.tsx`).
 - Done: `feat(frontend)` — Added AppLayout with Mantine AppShell (responsive sidebar & dark mode toggle), DashboardPage, and post-auth redirects (`AppLayout.tsx`, `DashboardPage.tsx`, `App.tsx`, `LoginPage.tsx`, `RegisterPage.tsx`).
 - Done: `refactor(frontend)` — Migrated `RegisterPage` to Mantine UI, removed `RegisterPage.css`, and elevated visual quote design on auth pages (`RegisterPage.tsx`, `LoginPage.tsx`).

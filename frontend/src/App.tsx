@@ -4,6 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { VocabularyPage } from './pages/VocabularyPage';
+import { FlashcardPage } from './pages/FlashcardPage';
 import { AppLayout } from './components/layout/AppLayout';
 import './App.css';
 
@@ -19,6 +20,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/vocabulary" element={<VocabularyPage />} />
+          <Route path="/review" element={<FlashcardPage />} />
           {/* Add future protected routes here */}
         </Route>
       </Routes>
