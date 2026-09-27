@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Done: `refactor(frontend)` — Migrated `LandingPage` from custom CSS to Mantine UI components and Tabler icons (`LandingPage.tsx`, `LandingPage.css`).
+- Done: `chore(agents)` — Updated `frontend-design` skill with anti-cliché guidelines and token consistency rules (`frontend-design/SKILL.md`).
+
 - Done: `chore(frontend)` — Integrated Mantine UI (v7) with PostCSS configuration and `MantineProvider` setup (`main.tsx`, `postcss.config.cjs`, `package.json`).
 - Done: `feat(frontend)` — Added RegisterPage (sign-up) layout with routing support via react-router-dom (`RegisterPage.tsx`, `RegisterPage.css`, `App.tsx`).
 - Done: `feat(frontend)` — Added LoginPage layout with routing support via react-router-dom (`LoginPage.tsx`, `LoginPage.css`, `App.tsx`).
