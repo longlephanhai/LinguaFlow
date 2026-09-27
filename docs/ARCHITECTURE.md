@@ -24,39 +24,45 @@
 
 | Component | Responsibility |
 |---|---|
-| `apps/web` (React + TS + Vite) | SPA: Dashboard, Vocabulary Manager, Flashcard Review, Quiz, AI Chat, Writing Review, Settings |
-| `apps/extension` (CRXJS: React + TS + Vite, Manifest V3) | `content script`: detects text selection, shows inline popup UI. `background` (service worker): holds auth token, proxies API calls. `popup`: extension toolbar icon UI (quick vocabulary list / login) |
-| `apps/backend` (NestJS + TS) | REST API. Modules: `AuthModule`, `VocabularyModule`, `ReviewModule`, `QuizModule`, `ChatModule`, `WritingModule`, `DashboardModule`, `AiModule` |
+| `frontend/` (React + TS + Vite) | SPA: Dashboard, Vocabulary Manager, Flashcard Review, Quiz, AI Chat, Writing Review, Settings |
+| `extension/` (CRXJS: React + TS + Vite, Manifest V3) | `content script`: detects text selection, shows inline popup UI. `background` (service worker): holds auth token, proxies API calls. `popup`: extension toolbar icon UI (quick vocabulary list / login) |
+| `backend/` (NestJS + TS) | REST API. Modules: `AuthModule`, `VocabularyModule`, `ReviewModule`, `QuizModule`, `ChatModule`, `WritingModule`, `DashboardModule`, `AiModule` |
 | MongoDB | Persistence — see `DATA-SCHEMA.md` |
 | Gemini API | Called only through `AiModule` — never imported directly in other modules |
 
 ## 3. Repository Layout
 
-Monorepo (single repo, 3 deployable apps) — simplest for a solo developer, enables sharing TypeScript types between backend/web/extension.
+Flat structure — 3 independent apps at the root level, each with its own `package.json`, `tsconfig.json`, and dependency management. No workspace orchestrator (no Turborepo/Nx/Lerna). Each app manages its own TypeScript types and DTOs internally.
 
 ```
 linguaflow/
-├── apps/
-│   ├── backend/        # NestJS
-│   │   └── src/
-│   │       ├── auth/
-│   │       ├── vocabulary/
-│   │       ├── review/
-│   │       ├── quiz/
-│   │       ├── chat/
-│   │       ├── writing/
-│   │       ├── dashboard/
-│   │       └── ai/             # AiModule — Gemini wrapper, provider-agnostic
-│   ├── web/             # React + Vite
-│   └── extension/       # CRXJS (React + Vite, Manifest V3)
-│       └── src/
-│           ├── content/        # content script (selection listener + popup UI)
-│           ├── background/     # service worker
-│           └── popup/          # toolbar popup
-├── packages/
-│   └── shared-types/    # DTOs/interfaces shared across backend/web/extension
+├── backend/             # NestJS — standalone Node project
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/
+│       ├── auth/
+│       ├── vocabulary/
+│       ├── review/
+│       ├── quiz/
+│       ├── chat/
+│       ├── writing/
+│       ├── dashboard/
+│       └── ai/              # AiModule — Gemini wrapper, provider-agnostic
+├── frontend/            # React + Vite — standalone Node project
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/
+├── extension/           # CRXJS (React + Vite, Manifest V3) — standalone Node project
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/
+│       ├── content/         # content script (selection listener + popup UI)
+│       ├── background/      # service worker
+│       └── popup/           # toolbar popup
 └── docs/
 ```
+
+> **Type sharing strategy:** Each app defines its own request/response types matching `API-CONTRACTS.md`. If a DTO drifts, the API contract doc is the single source of truth — not a shared package.
 
 ## 4. Auth Flow (shared between Web and Extension)
 
@@ -120,5 +126,5 @@ linguaflow/
 
 - ✅ SRS algorithm → simplified SM-2 (§9)
 - ✅ Auth mechanism → JWT bearer, shared Web/Extension (§4)
-- ✅ Repo structure → monorepo (§3)
+- ✅ Repo structure → flat sibling directories (§3)
 - ⬜ Still open: exact rate-limit numbers (tune post-launch), whitelisted vs. all websites for Extension (deferred — MVP assumes all websites).

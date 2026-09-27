@@ -30,11 +30,11 @@
 
 ## Coding Style
 
-- TypeScript strict mode on all three apps (`backend`, `web`, `extension`).
+- TypeScript strict mode on all three apps (`backend`, `frontend`, `extension`).
 - NestJS: one module per domain (`auth`, `vocabulary`, `review`, `quiz`, `chat`, `writing`, `dashboard`, `ai`) — no cross-module direct DB access; go through the owning module's service.
 - React: functional components + hooks only, no class components.
 - Naming: files kebab-case (`vocabulary-item.service.ts`), React components PascalCase (`FlashcardReview.tsx`), Mongoose schemas PascalCase with `Schema` suffix (`OccurrenceSchema`).
-- Shared DTOs/types live in `packages/shared-types` and are imported by backend, web, and extension — never duplicated.
+- Each app (`backend/`, `frontend/`, `extension/`) defines its own DTOs/types matching `API-CONTRACTS.md` — the contract doc is the single source of truth if types drift.
 
 ## Workflow
 
