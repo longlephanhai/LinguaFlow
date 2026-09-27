@@ -7,19 +7,25 @@ description: Use when staging changes, crafting conventional commit messages, an
 
 When performing git operations and creating commits:
 
-1. **Pre-commit Check:**
-   - Run `git status` and `git diff` to review all staged and unstaged changes.
-   - Verify no temporary files (`.env`, `node_modules`, build artifacts, or debug logs) are staged.
-   - Ensure no hardcoded secrets or API keys are present in the diff.
+1. **Pre-commit Inspection & Safety:**
+   - Run `git status` and `git diff` to inspect changes.
+   - Verify that no sensitive files (`.env`, credentials, API keys) or build artifacts (`node_modules/`, dist, logs) are staged or modified unsafely.
+   - Separate unrelated changes into atomic commits instead of committing everything at once.
 
-2. **Commit Message Format:**
-   Follow Conventional Commits specification: `type(scope): concise imperative description`
-   - `feat`: New feature (e.g., `feat(extension): add selection capture popup`)
-   - `fix`: Bug fix (e.g., `fix(auth): handle token refresh 401 error`)
-   - `docs`: Documentation updates (e.g., `docs(prd): update MVP scope`)
-   - `refactor`: Code change that neither fixes a bug nor adds a feature
-   - `test`: Adding or updating tests
-   - `chore`: Maintenance, config, or dependency updates
+2. **Changelog & Documentation Sync (If applicable):**
+   - If this change resolves or completes a task from `@docs/PRD.md`, update `@docs/CHANGELOG.md` (e.g., move the item to the `Done` section).
+   - Stage the specific modified files: use selective `git add <file_paths>`, strictly avoid `git add .` unless all changes belong to the same scope.
 
-3. **Changelog Sync:**
-   - If this commit completes an item listed in `@docs/PRD.md`, update `@docs/CHANGELOG.md` by moving the completed item to the `Done` section before finalizing the commit.
+3. **Commit Message Format:**
+   Follow Conventional Commits specification: `<type>(<scope>): <short imperative description>`
+   - `feat`: New feature
+   - `fix`: Bug fix
+   - `docs`: Documentation updates
+   - `refactor`: Code restructuring without functional changes
+   - `test`: Adding or modifying tests
+   - `chore`: Dependency, build, or configuration updates
+   - Use lowercase, imperative mood (e.g., `fix(auth): handle token refresh 401 error`).
+
+4. **Execution Boundaries:**
+   - Run `git commit -m "..."`.
+   - Never run `git push` unless explicitly instructed by the user.
