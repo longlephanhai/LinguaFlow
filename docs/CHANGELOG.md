@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Done: `feat(backend)` — Configured Mongoose with `@nestjs/mongoose` and `@nestjs/config` using `MONGODB_URI` (`app.module.ts`, `package.json`).
 - Done: `chore(backend)` — Initialized NestJS backend project with ESM and Vitest, added `.env`, `.env.example`, `.gitignore`, and `npm run dev` script (`backend/`).
 - Done: `feat(frontend)` — Added FlashcardPage (Flashcard Review) with progressive reveal, sentence context highlighting, and SM-2 readiness (`FlashcardPage.tsx`, `App.tsx`).
 - Done: `feat(frontend)` — Added VocabularyPage (Vocabulary Manager) with search, filter, status tags, table view, and empty states (`VocabularyPage.tsx`, `App.tsx`).
