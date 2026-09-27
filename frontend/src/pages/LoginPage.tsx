@@ -8,7 +8,6 @@ import {
   Anchor,
   Box,
   Flex,
-  Blockquote,
   Group,
 } from '@mantine/core';
 
@@ -21,20 +20,13 @@ export const LoginPage = () => {
         display={{ base: 'none', md: 'flex' }}
         align="center"
         justify="center"
-        bg="var(--color-surface)"
         pos="relative"
-        style={{ borderRight: '1px solid var(--color-border)', overflow: 'hidden' }}
+        style={{
+          borderRight: '1px solid var(--color-border)',
+          overflow: 'hidden',
+          background: 'radial-gradient(circle at 15% 15%, rgba(67, 56, 202, 0.04) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(219, 39, 119, 0.04) 0%, transparent 50%), var(--color-surface)',
+        }}
       >
-        <Box
-          pos="absolute"
-          top={0}
-          left={0}
-          right={0}
-          bottom={0}
-          opacity={0.03}
-          style={{ background: 'var(--color-ai-gradient)', pointerEvents: 'none' }}
-        />
-        
         <Box
           component={Link}
           to="/"
@@ -55,34 +47,38 @@ export const LoginPage = () => {
           LinguaFlow
         </Box>
 
-        <Box maw={480} p="var(--space-8)" pos="relative" style={{ zIndex: 1 }}>
-          <Blockquote 
-            color="var(--color-accent-primary)" 
-            p="var(--space-6)"
-            ff="serif"
-            fz="var(--text-2xl)"
-            style={{ 
-              lineHeight: 1.4, 
-              color: 'var(--color-text-primary)',
-              borderLeftColor: 'var(--color-accent-primary)',
-              borderLeftWidth: '4px',
-              margin: 0
-            }}
-          >
-            "Language is the road map of a culture. It tells you where its people come from and where they are going."
-            <Text 
-              component="footer" 
-              mt="var(--space-6)" 
-              ff="var(--font-family-base)"
-              fz="var(--text-sm)"
-              c="var(--color-text-secondary)"
-              fw={500}
-              tt="uppercase"
-              style={{ letterSpacing: '0.05em' }}
-            >
-              — Rita Mae Brown
-            </Text>
-          </Blockquote>
+        <Box maw={460} p="var(--space-8)" pos="relative" style={{ zIndex: 1 }}>
+          <Box style={{ display: 'flex', gap: 'var(--space-6)', alignItems: 'stretch' }}>
+            <Box
+              w={3}
+              style={{
+                background: 'var(--color-ai-gradient)',
+                borderRadius: 'var(--radius-full)',
+                flexShrink: 0,
+              }}
+            />
+            <Box>
+              <Text
+                ff="var(--font-family-display)"
+                fz="var(--text-2xl)"
+                fw={500}
+                lh={1.4}
+                c="var(--color-text-primary)"
+                style={{ letterSpacing: '-0.01em' }}
+              >
+                “Language is the road map of a culture. It tells you where its people come from and where they are going.”
+              </Text>
+              <Text
+                mt="var(--space-4)"
+                ff="var(--font-family-body)"
+                fz="var(--text-sm)"
+                fw={500}
+                c="var(--color-text-secondary)"
+              >
+                Rita Mae Brown
+              </Text>
+            </Box>
+          </Box>
         </Box>
       </Flex>
 
@@ -94,6 +90,25 @@ export const LoginPage = () => {
         p="var(--space-8)"
       >
         <Box w="100%" maw={400}>
+          {/* Mobile Logo */}
+          <Box
+            component={Link}
+            to="/"
+            display={{ base: 'inline-block', md: 'none' }}
+            mb="var(--space-8)"
+            ff="var(--font-family-display)"
+            fw={700}
+            fz="var(--text-2xl)"
+            style={{
+              textDecoration: 'none',
+              background: 'var(--color-ai-gradient)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            LinguaFlow
+          </Box>
+
           <Box mb="var(--space-8)">
             <Title 
               order={1} 
@@ -109,7 +124,12 @@ export const LoginPage = () => {
             </Text>
           </Box>
 
-          <Box component="form" onSubmit={(e: React.FormEvent) => e.preventDefault()} display="flex" style={{ flexDirection: 'column', gap: 'var(--space-6)' }}>
+          <Box 
+            component="form" 
+            onSubmit={(e: React.FormEvent) => e.preventDefault()} 
+            display="flex" 
+            style={{ flexDirection: 'column', gap: 'var(--space-6)' }}
+          >
             <TextInput
               label="Email"
               placeholder="hello@example.com"
@@ -120,10 +140,10 @@ export const LoginPage = () => {
                 label: { fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' },
                 input: {
                   padding: 'var(--space-3) var(--space-4)',
-                  background: 'var(--color-surface)',
+                  backgroundColor: 'var(--color-surface)',
                   border: '1px solid var(--color-border)',
                   borderRadius: 'var(--radius-md)',
-                  fontFamily: 'var(--font-family-base)',
+                  fontFamily: 'var(--font-family-body)',
                   fontSize: 'var(--text-base)',
                   color: 'var(--color-text-primary)',
                   height: 'auto',
@@ -147,10 +167,10 @@ export const LoginPage = () => {
                 autoComplete="current-password"
                 styles={{
                   input: {
-                    background: 'var(--color-surface)',
+                    backgroundColor: 'var(--color-surface)',
                     border: '1px solid var(--color-border)',
                     borderRadius: 'var(--radius-md)',
-                    fontFamily: 'var(--font-family-base)',
+                    fontFamily: 'var(--font-family-body)',
                     fontSize: 'var(--text-base)',
                     color: 'var(--color-text-primary)',
                     height: 'auto',
@@ -167,9 +187,11 @@ export const LoginPage = () => {
               type="submit" 
               fullWidth 
               mt="var(--space-2)"
+              radius="md"
               style={{
                 padding: 'var(--space-3) var(--space-4)',
                 fontSize: 'var(--text-base)',
+                fontWeight: 600,
                 height: 'auto',
                 backgroundColor: 'var(--color-accent-primary)',
                 color: 'white'
@@ -181,7 +203,7 @@ export const LoginPage = () => {
 
           <Text ta="center" mt="var(--space-8)" fz="var(--text-sm)" c="var(--color-text-secondary)">
             Don't have an account?{' '}
-            <Anchor component={Link} to="/signup" fw={500} style={{ color: 'var(--color-accent-primary)' }}>
+            <Anchor component={Link} to="/signup" fw={600} style={{ color: 'var(--color-accent-primary)' }}>
               Sign up
             </Anchor>
           </Text>

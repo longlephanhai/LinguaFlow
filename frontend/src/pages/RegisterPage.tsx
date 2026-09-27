@@ -1,100 +1,226 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import './RegisterPage.css';
+import {
+  TextInput,
+  PasswordInput,
+  Button,
+  Title,
+  Text,
+  Anchor,
+  Box,
+  Flex,
+} from '@mantine/core';
 
 export const RegisterPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
-
   return (
-    <div className="register-layout">
-      <div className="register-form-container">
-        <div className="register-form-wrapper">
-          <Link to="/" className="register-logo-mobile">
+    <Flex mih="100vh" bg="var(--color-bg-base)">
+      {/* Form Side */}
+      <Flex 
+        flex={1} 
+        align="center" 
+        justify="center" 
+        p="var(--space-8)"
+      >
+        <Box w="100%" maw={400}>
+          {/* Mobile Logo */}
+          <Box
+            component={Link}
+            to="/"
+            display={{ base: 'inline-block', md: 'none' }}
+            mb="var(--space-8)"
+            ff="var(--font-family-display)"
+            fw={700}
+            fz="var(--text-2xl)"
+            style={{
+              textDecoration: 'none',
+              background: 'var(--color-ai-gradient)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
             LinguaFlow
-          </Link>
-          <div className="register-form-header">
-            <h1 className="register-title">Create an account</h1>
-            <p className="register-subtitle">Start your language journey with us today.</p>
-          </div>
+          </Box>
 
-          <form className="register-form" onSubmit={(e) => e.preventDefault()}>
-            <div className="form-group">
-              <label htmlFor="name">Full Name</label>
-              <input 
-                type="text" 
-                id="name" 
-                placeholder="Jane Doe" 
-                autoComplete="name"
-                required 
-              />
-            </div>
+          <Box mb="var(--space-8)">
+            <Title 
+              order={1} 
+              ff="var(--font-family-display)" 
+              fz="var(--text-3xl)" 
+              mb="var(--space-2)" 
+              style={{ letterSpacing: '-0.02em', color: 'var(--color-text-primary)' }}
+            >
+              Create an account
+            </Title>
+            <Text c="var(--color-text-secondary)" fz="var(--text-base)">
+              Start your language journey with us today.
+            </Text>
+          </Box>
 
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input 
-                type="email" 
-                id="email" 
-                placeholder="hello@example.com" 
-                autoComplete="email"
-                required 
-              />
-            </div>
+          <Box 
+            component="form" 
+            onSubmit={(e: React.FormEvent) => e.preventDefault()} 
+            display="flex" 
+            style={{ flexDirection: 'column', gap: 'var(--space-6)' }}
+          >
+            <TextInput
+              label="Full Name"
+              placeholder="Jane Doe"
+              required
+              id="name"
+              autoComplete="name"
+              styles={{
+                label: { fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' },
+                input: {
+                  padding: 'var(--space-3) var(--space-4)',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  fontFamily: 'var(--font-family-body)',
+                  fontSize: 'var(--text-base)',
+                  color: 'var(--color-text-primary)',
+                  height: 'auto',
+                }
+              }}
+            />
+
+            <TextInput
+              label="Email"
+              placeholder="hello@example.com"
+              required
+              id="email"
+              autoComplete="email"
+              styles={{
+                label: { fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' },
+                input: {
+                  padding: 'var(--space-3) var(--space-4)',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  fontFamily: 'var(--font-family-body)',
+                  fontSize: 'var(--text-base)',
+                  color: 'var(--color-text-primary)',
+                  height: 'auto',
+                }
+              }}
+            />
             
-            <div className="form-group">
-              <div className="password-header">
-                <label htmlFor="password">Password</label>
-              </div>
-              <div className="password-input-wrapper">
-                <input 
-                  type={showPassword ? 'text' : 'password'} 
-                  id="password" 
-                  placeholder="••••••••" 
-                  autoComplete="new-password"
-                  required 
-                />
-                <button
-                  type="button"
-                  className="password-toggle-btn"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
+            <PasswordInput
+              label="Password"
+              placeholder="••••••••"
+              required
+              id="password"
+              autoComplete="new-password"
+              styles={{
+                label: { fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' },
+                input: {
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  fontFamily: 'var(--font-family-body)',
+                  fontSize: 'var(--text-base)',
+                  color: 'var(--color-text-primary)',
+                  height: 'auto',
+                },
+                innerInput: {
+                  padding: 'var(--space-3) var(--space-4)',
+                  height: 'auto',
+                }
+              }}
+            />
 
-            <button type="submit" className="btn btn-primary btn-full">
+            <Button 
+              type="submit" 
+              fullWidth 
+              mt="var(--space-2)"
+              radius="md"
+              style={{
+                padding: 'var(--space-3) var(--space-4)',
+                fontSize: 'var(--text-base)',
+                fontWeight: 600,
+                height: 'auto',
+                backgroundColor: 'var(--color-accent-primary)',
+                color: 'white'
+              }}
+            >
               Create Account
-            </button>
-          </form>
-          
-          <p className="register-footer">
-            Already have an account? <Link to="/login">Log in</Link>
-          </p>
-        </div>
-      </div>
-      
-      <div className="register-visual">
-        <Link to="/" className="register-logo">
+            </Button>
+          </Box>
+
+          <Text ta="center" mt="var(--space-8)" fz="var(--text-sm)" c="var(--color-text-secondary)">
+            Already have an account?{' '}
+            <Anchor component={Link} to="/login" fw={600} style={{ color: 'var(--color-accent-primary)' }}>
+              Log in
+            </Anchor>
+          </Text>
+        </Box>
+      </Flex>
+
+      {/* Visual Side */}
+      <Flex 
+        flex={1} 
+        display={{ base: 'none', md: 'flex' }}
+        align="center"
+        justify="center"
+        pos="relative"
+        style={{
+          borderLeft: '1px solid var(--color-border)',
+          overflow: 'hidden',
+          background: 'radial-gradient(circle at 85% 15%, rgba(219, 39, 119, 0.04) 0%, transparent 50%), radial-gradient(circle at 15% 85%, rgba(67, 56, 202, 0.04) 0%, transparent 50%), var(--color-surface)',
+        }}
+      >
+        <Box
+          component={Link}
+          to="/"
+          pos="absolute"
+          top="var(--space-8)"
+          right="var(--space-8)"
+          ff="var(--font-family-display)"
+          fw={700}
+          fz="var(--text-2xl)"
+          style={{
+            textDecoration: 'none',
+            background: 'var(--color-ai-gradient)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            zIndex: 1,
+          }}
+        >
           LinguaFlow
-        </Link>
-        <div className="register-visual-content">
-          <blockquote className="register-quote">
-            "To have another language is to possess a second soul."
-            <footer>— Charlemagne</footer>
-          </blockquote>
-        </div>
-      </div>
-    </div>
+        </Box>
+
+        <Box maw={460} p="var(--space-8)" pos="relative" style={{ zIndex: 1 }}>
+          <Box style={{ display: 'flex', gap: 'var(--space-6)', alignItems: 'stretch' }}>
+            <Box
+              w={3}
+              style={{
+                background: 'var(--color-ai-gradient)',
+                borderRadius: 'var(--radius-full)',
+                flexShrink: 0,
+              }}
+            />
+            <Box>
+              <Text
+                ff="var(--font-family-display)"
+                fz="var(--text-2xl)"
+                fw={500}
+                lh={1.4}
+                c="var(--color-text-primary)"
+                style={{ letterSpacing: '-0.01em' }}
+              >
+                “To have another language is to possess a second soul.”
+              </Text>
+              <Text
+                mt="var(--space-4)"
+                ff="var(--font-family-body)"
+                fz="var(--text-sm)"
+                fw={500}
+                c="var(--color-text-secondary)"
+              >
+                Charlemagne
+              </Text>
+            </Box>
+          </Box>
+        </Box>
+      </Flex>
+    </Flex>
   );
 };
