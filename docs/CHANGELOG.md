@@ -1,5 +1,10 @@
 # CHANGELOG.md — LinguaFlow
 
+## Unreleased
+
+- Done: `feat(frontend)` — Initial landing page layout with hero section and interactive contextual AI lookup demo (`LandingPage.tsx`).
+- Done: Design tokens and typography setup in `index.css` (Space Grotesk & Inter, color tokens, shadow scales).
+
 ## v0.2 — Architecture & technical design complete
 
 - Done: `ARCHITECTURE.md` — monolith NestJS backend, monorepo layout, JWT auth shared Web/Extension, contextual-capture data flow, provider-agnostic AI layer, caching/rate-limiting strategy, Extension privacy boundary enforced at architecture level.
