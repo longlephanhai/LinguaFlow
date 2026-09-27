@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import './LandingPage.css';
 
 export const LandingPage = () => {
@@ -9,7 +10,7 @@ export const LandingPage = () => {
           <span>LinguaFlow</span>
         </div>
         <nav className="header-nav">
-          <button type="button" className="btn btn-ghost">Log In</button>
+          <Link to="/login" className="btn btn-ghost">Log In</Link>
           <button type="button" className="btn btn-primary">Sign Up</button>
         </nav>
       </header>
