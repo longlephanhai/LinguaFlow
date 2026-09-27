@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   TextInput,
   PasswordInput,
@@ -11,6 +11,8 @@ import {
 } from '@mantine/core';
 
 export const RegisterPage = () => {
+  const navigate = useNavigate();
+
   return (
     <Flex mih="100vh" bg="var(--color-bg-base)">
       {/* Form Side */}
@@ -57,7 +59,10 @@ export const RegisterPage = () => {
 
           <Box 
             component="form" 
-            onSubmit={(e: React.FormEvent) => e.preventDefault()} 
+            onSubmit={(e: React.FormEvent) => {
+              e.preventDefault();
+              navigate('/dashboard');
+            }} 
             display="flex" 
             style={{ flexDirection: 'column', gap: 'var(--space-6)' }}
           >

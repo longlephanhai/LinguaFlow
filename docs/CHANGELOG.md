@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Done: `feat(frontend)` — Added AppLayout with Mantine AppShell (responsive sidebar & dark mode toggle), DashboardPage, and post-auth redirects (`AppLayout.tsx`, `DashboardPage.tsx`, `App.tsx`, `LoginPage.tsx`, `RegisterPage.tsx`).
 - Done: `refactor(frontend)` — Migrated `RegisterPage` to Mantine UI, removed `RegisterPage.css`, and elevated visual quote design on auth pages (`RegisterPage.tsx`, `LoginPage.tsx`).
 - Done: `refactor(frontend)` — Migrated `LoginPage` from custom CSS to Mantine UI components (`LoginPage.tsx`, `LoginPage.css`).
 - Done: `refactor(frontend)` — Migrated `LandingPage` from custom CSS to Mantine UI components and Tabler icons (`LandingPage.tsx`, `LandingPage.css`).
