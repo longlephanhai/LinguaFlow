@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Done: `feat(frontend)` — Configured Vitest, React Testing Library, and added sample unit test (`package.json`, `vite.config.ts`, `setupTests.ts`, `App.test.tsx`).
 - Done: `feat(backend)` — Configured global TransformInterceptor, AllExceptionsFilter, and ResponseMessage decorator compliant with API contract envelope (`backend/src/core/`, `backend/src/main.ts`).
 - Done: `chore(backend)` — Created `modules/` directory in backend `src` and updated architecture layout doc (`backend/src/modules/`, `ARCHITECTURE.md`).
 - Done: `feat(backend)` — Configured Mongoose with `@nestjs/mongoose` and `@nestjs/config` using `MONGODB_URI` (`app.module.ts`, `package.json`).
