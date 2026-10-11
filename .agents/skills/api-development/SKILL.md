@@ -49,12 +49,12 @@ export class LookupVocabularyDto {
 @UseGuards(JwtAuthGuard)
 async lookup(@Body() dto: LookupVocabularyDto, @Request() req) {
   const data = await this.vocabularyService.lookup(dto, req.user.id);
-  return { success: true, data };
+  return data; // Interceptor will wrap this in { success: true, data }
 }
 ```
 
 - Always apply `@UseGuards(JwtAuthGuard)` unless the endpoint is explicitly public (e.g., `POST /auth/login`).
-- Return `{ success: true, data }` — never return raw data directly.
+- Return the raw data directly — the configured global interceptor will automatically wrap it in the `{ success: true, data }` envelope.
 
 ---
 
@@ -96,7 +96,7 @@ Rules:
 All endpoints must return this shape (from `@docs/API-CONTRACTS.md`):
 
 ```ts
-// Success
+// Success (Handled by Interceptor)
 { "success": true, "data": { ... } }
 
 // Error
@@ -125,7 +125,7 @@ Default guidance from `ARCHITECTURE.md §7`: lookup 100/day, quiz 10/day, chat 5
 - [ ] `API-CONTRACTS.md` updated with new endpoint
 - [ ] DTO created with full `class-validator` decorators
 - [ ] `JwtAuthGuard` applied (or explicitly documented as public)
-- [ ] Response uses `{ success: true, data }` envelope
+- [ ] Controller returns raw data directly (relying on interceptor for `{ success: true, data }` envelope)
 - [ ] Error paths use defined error codes
 - [ ] AI calls wrapped in `try/catch` returning `AI_PROVIDER_ERROR`
 - [ ] E2E test covers happy path + validation error path

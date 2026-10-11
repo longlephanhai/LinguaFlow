@@ -28,6 +28,19 @@ Response: `{ "accessToken": "..." }`
 
 **`GET /auth/me`** (Bearer token required) → `{ "id": "...", "email": "...", "settings": {...} }`
 
+## Users
+
+**`GET /users/:id`**
+Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": null, "settings": {...} }`
+
+**`PATCH /users/:id`**
+Request: `{ "displayName"?: "...", "avatarUrl"?: "..." }`
+Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": "...", "settings": {...} }`
+
+**`PATCH /users/:id/settings`**
+Request: `{ "dailyReviewGoal"?: 20, "quizDefaultCount"?: 10, "timezone"?: "UTC" }`
+Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": "...", "settings": {...} }`
+
 ## Vocabulary
 
 **`POST /vocabulary/lookup`** — Extension capture step (does NOT save, just explains)
