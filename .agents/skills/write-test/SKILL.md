@@ -7,24 +7,29 @@ description: Use when writing, running, or debugging unit tests for backend logi
 
 ## Test Stack
 
-- **Framework:** Jest (all three apps — backend, web, extension)
-- **E2E:** NestJS built-in `@nestjs/testing` + `supertest`
+- **Framework:** Vitest (all apps — backend, frontend, extension)
+- **E2E:** NestJS built-in `@nestjs/testing` + `supertest` with Vitest (`vitest.config.e2e.ts`)
 - **File naming:** `*.spec.ts` for unit tests, `*.e2e-spec.ts` for E2E
-- **Run command:** `npm run test` (unit) / `npm run test:e2e` (E2E) from the relevant `apps/` directory
+- **Run commands:**
+  - **Both FE & BE:** `npm --prefix backend test && npm --prefix frontend test -- --run`
+  - **Backend only:** `npm --prefix backend test` (unit) / `npm --prefix backend run test:e2e` (E2E)
+  - **Frontend only:** `npm --prefix frontend test -- --run`
 
 ---
 
 ## 1. AI Mocking Requirement (mandatory)
 
 - **ALWAYS** mock the `AIProvider` in `AiModule` — never trigger live Gemini calls in any automated test.
-- Inject a Jest mock that implements the `AIProvider` interface:
+- Inject a Vitest mock that implements the `AIProvider` interface:
 
 ```ts
+import { vi } from 'vitest';
+
 const mockAiProvider = {
-  explainInContext: jest.fn().mockResolvedValue({ meaning: 'mock meaning', example: 'mock example' }),
-  generateQuiz: jest.fn().mockResolvedValue([]),
-  chat: jest.fn().mockResolvedValue('mock reply'),
-  reviewWriting: jest.fn().mockResolvedValue({ feedback: 'mock', suggestions: [] }),
+  explainInContext: vi.fn().mockResolvedValue({ meaning: 'mock meaning', example: 'mock example' }),
+  generateQuiz: vi.fn().mockResolvedValue([]),
+  chat: vi.fn().mockResolvedValue('mock reply'),
+  reviewWriting: vi.fn().mockResolvedValue({ feedback: 'mock', suggestions: [] }),
 };
 ```
 
@@ -37,6 +42,8 @@ const mockAiProvider = {
 Target: pure functions with no I/O dependency. Primary example is the SM-2 scheduling function in `ReviewModule`.
 
 ```ts
+import { describe, it, expect } from 'vitest';
+
 describe('SM-2 scheduler', () => {
   it('should reset interval to 1 day on failed recall', () => {
     const result = scheduleNext({ remembered: false, easeFactor: 2.5, repetitions: 3, intervalDays: 6 });
@@ -64,6 +71,9 @@ Every new endpoint needs at least one E2E test before being considered done (per
 Always verify the standard response envelope `{ success: true, data: ... }` on success and `{ success: false, error: { code, message } }` on error:
 
 ```ts
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+
 describe('POST /vocabulary/lookup (e2e)', () => {
   it('should return 200 with correct envelope on valid input', async () => {
     const res = await request(app.getHttpServer())
@@ -93,19 +103,21 @@ describe('POST /vocabulary/lookup (e2e)', () => {
 
 ## 4. Frontend & Extension Mocks
 
-When writing tests for Extension components or background workers, mock Chrome APIs:
+When writing tests for Extension components or background workers, mock Chrome APIs with `vi.fn()`:
 
 ```ts
+import { vi } from 'vitest';
+
 global.chrome = {
   storage: {
     local: {
-      get: jest.fn().mockResolvedValue({ accessToken: 'mock-token' }),
-      set: jest.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue({ accessToken: 'mock-token' }),
+      set: vi.fn().mockResolvedValue(undefined),
     },
   },
   runtime: {
-    sendMessage: jest.fn().mockResolvedValue({ meaning: 'mock' }),
-    onMessage: { addListener: jest.fn() },
+    sendMessage: vi.fn().mockResolvedValue({ meaning: 'mock' }),
+    onMessage: { addListener: vi.fn() },
   },
 } as any;
 ```
@@ -114,9 +126,11 @@ global.chrome = {
 
 ## 5. Test Structure Conventions
 
-```
+```ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 describe('<UnitName or endpoint>', () => {
-  beforeEach(() => { jest.clearAllMocks(); });
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('should <expected behavior>', () => { ... });
   it('should handle <edge case>', () => { ... });
@@ -125,5 +139,5 @@ describe('<UnitName or endpoint>', () => {
 
 - One `describe` block per function / controller method / component.
 - `it()` descriptions start with `should` to clearly state the expected behavior.
-- `beforeEach` calls `jest.clearAllMocks()` to avoid state leakage between tests.
-- Never use real timers — use `jest.useFakeTimers()` when time-sensitive logic is involved.
+- `beforeEach` calls `vi.clearAllMocks()` to avoid state leakage between tests.
+- Never use real timers — use `vi.useFakeTimers()` when time-sensitive logic is involved.
