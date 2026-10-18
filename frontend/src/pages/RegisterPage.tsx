@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/auth';
 import {
   TextInput,
   PasswordInput,
@@ -8,10 +10,33 @@ import {
   Anchor,
   Box,
   Flex,
+  Alert,
 } from '@mantine/core';
+import { IconAlertCircle } from '@tabler/icons-react';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await register(email, password, name || undefined);
+      navigate('/dashboard', { replace: true });
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Flex mih="100vh" bg="var(--color-bg-base)">
@@ -59,19 +84,23 @@ export const RegisterPage = () => {
 
           <Box 
             component="form" 
-            onSubmit={(e: React.FormEvent) => {
-              e.preventDefault();
-              navigate('/dashboard');
-            }} 
+            onSubmit={handleSubmit} 
             display="flex" 
             style={{ flexDirection: 'column', gap: 'var(--space-6)' }}
           >
+            {error && (
+              <Alert icon={<IconAlertCircle size="1rem" />} color="red" radius="md">
+                {error}
+              </Alert>
+            )}
+
             <TextInput
               label="Full Name"
               placeholder="Jane Doe"
-              required
               id="name"
               autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.currentTarget.value)}
               styles={{
                 label: { fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' },
                 input: {
@@ -92,7 +121,10 @@ export const RegisterPage = () => {
               placeholder="hello@example.com"
               required
               id="email"
+              type="email"
               autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.currentTarget.value)}
               styles={{
                 label: { fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' },
                 input: {
@@ -114,6 +146,8 @@ export const RegisterPage = () => {
               required
               id="password"
               autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.currentTarget.value)}
               styles={{
                 label: { fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' },
                 input: {
@@ -135,6 +169,7 @@ export const RegisterPage = () => {
             <Button 
               type="submit" 
               fullWidth 
+              loading={isSubmitting}
               mt="var(--space-2)"
               radius="md"
               style={{

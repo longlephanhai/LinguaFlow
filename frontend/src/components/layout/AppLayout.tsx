@@ -1,6 +1,7 @@
-import { AppShell, Burger, Group, Title, NavLink, ActionIcon, useMantineColorScheme } from '@mantine/core';
+import { AppShell, Burger, Group, Title, NavLink, ActionIcon, useMantineColorScheme, Text, Box } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../lib/auth';
 import { 
   IconDashboard, 
   IconBook, 
@@ -10,7 +11,8 @@ import {
   IconPencil, 
   IconSettings,
   IconSun,
-  IconMoon
+  IconMoon,
+  IconLogout
 } from '@tabler/icons-react';
 
 const navData = [
@@ -26,6 +28,7 @@ const navData = [
 export function AppLayout() {
   const [opened, { toggle }] = useDisclosure();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -61,19 +64,39 @@ export function AppLayout() {
             <Title order={3} c="blue">LinguaFlow</Title>
           </Group>
           
-          <ActionIcon
-            variant="default"
-            onClick={() => toggleColorScheme()}
-            size="lg"
-            aria-label="Toggle color scheme"
-          >
-            {colorScheme === 'dark' ? <IconSun stroke={1.5} /> : <IconMoon stroke={1.5} />}
-          </ActionIcon>
+          <Group gap="xs">
+            <ActionIcon
+              variant="default"
+              onClick={() => toggleColorScheme()}
+              size="lg"
+              aria-label="Toggle color scheme"
+            >
+              {colorScheme === 'dark' ? <IconSun stroke={1.5} /> : <IconMoon stroke={1.5} />}
+            </ActionIcon>
+
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              onClick={async () => {
+                await logout();
+                navigate('/login');
+              }}
+              size="lg"
+              title="Log out"
+              aria-label="Log out"
+            >
+              <IconLogout stroke={1.5} />
+            </ActionIcon>
+          </Group>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
-        {links}
+      <AppShell.Navbar p="md" style={{ display: 'flex', flexDirection: 'column' }}>
+        <Box style={{ flex: 1 }}>{links}</Box>
+        <Box style={{ borderTop: '1px solid var(--mantine-color-default-border)', paddingTop: '12px' }}>
+          <Text size="sm" fw={600} truncate>{user?.displayName || 'User'}</Text>
+          <Text size="xs" c="dimmed" truncate>{user?.email}</Text>
+        </Box>
       </AppShell.Navbar>
 
       <AppShell.Main>

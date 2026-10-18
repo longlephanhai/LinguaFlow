@@ -1,4 +1,6 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../lib/auth';
 import {
   TextInput,
   PasswordInput,
@@ -9,10 +11,35 @@ import {
   Box,
   Flex,
   Group,
+  Alert,
 } from '@mantine/core';
+import { IconAlertCircle } from '@tabler/icons-react';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const from = (location.state as any)?.from?.pathname || '/dashboard';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await login(email, password);
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      setError(err.message || 'Failed to login');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Flex mih="100vh" bg="var(--color-bg-base)">
@@ -128,19 +155,25 @@ export const LoginPage = () => {
 
           <Box 
             component="form" 
-            onSubmit={(e: React.FormEvent) => {
-              e.preventDefault();
-              navigate('/dashboard');
-            }} 
+            onSubmit={handleSubmit} 
             display="flex" 
             style={{ flexDirection: 'column', gap: 'var(--space-6)' }}
           >
+            {error && (
+              <Alert icon={<IconAlertCircle size="1rem" />} color="red" radius="md">
+                {error}
+              </Alert>
+            )}
+
             <TextInput
               label="Email"
               placeholder="hello@example.com"
               required
               id="email"
+              type="email"
               autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.currentTarget.value)}
               styles={{
                 label: { fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' },
                 input: {
@@ -170,6 +203,8 @@ export const LoginPage = () => {
                 required
                 id="password"
                 autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.currentTarget.value)}
                 styles={{
                   input: {
                     backgroundColor: 'var(--color-surface)',
@@ -191,6 +226,7 @@ export const LoginPage = () => {
             <Button 
               type="submit" 
               fullWidth 
+              loading={isSubmitting}
               mt="var(--space-2)"
               radius="md"
               style={{
