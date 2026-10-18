@@ -26,16 +26,20 @@ Response: `{ "accessToken": "..." }`
 
 **`POST /auth/logout`** → `{ "success": true }`
 
-**`GET /auth/me`** (Bearer token required) → `{ "id": "...", "email": "...", "settings": {...} }`
+**`GET /auth/me`** (Bearer token required) → `{ "id": "...", "email": "...", "displayName": "...", "avatarUrl": null, "role": "admin", "permissions": ["users:read", "roles:manage"], "settings": {...} }`
 
 ## Users
 
 **`GET /users/:id`**
-Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": null, "settings": {...} }`
+Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": null, "roleId": "...", "settings": {...} }`
 
 **`PATCH /users/:id`**
-Request: `{ "displayName"?: "...", "avatarUrl"?: "..." }`
-Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": "...", "settings": {...} }`
+Request: `{ "displayName"?: "...", "avatarUrl"?: "...", "roleId"?: "..." }`
+Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": "...", "roleId": "...", "settings": {...} }`
+
+**`PATCH /users/:id/role`**
+Request: `{ "roleId": "..." }`
+Response: `{ "_id": "...", "email": "...", "roleId": "...", "settings": {...} }`
 
 **`PATCH /users/:id/settings`**
 Request: `{ "dailyReviewGoal"?: 20, "quizDefaultCount"?: 10, "timezone"?: "UTC" }`
@@ -102,12 +106,52 @@ Response: `{ "feedback": "...", "suggestions": ["Use 'went' without 'have' for s
 **`GET /dashboard/stats`**
 Response: `{ "dueCount": 12, "totalSaved": 240, "totalReviewed": 180, "recentQuizzes": [...], "recentActivity": [...] }`
 
+## Roles
+
+**`POST /roles`**
+Request: `{ "name": "admin", "description": "Administrator with full access", "permissions"?: ["<permissionId>"], "isActive"?: true }`
+Response: `{ "_id": "...", "name": "admin", "description": "Administrator with full access", "permissions": [...], "isActive": true }`
+
+**`GET /roles`**
+Response: `[{ "_id": "...", "name": "admin", "description": "...", "permissions": [...], "isActive": true }]`
+
+**`GET /roles/:id`**
+Response: `{ "_id": "...", "name": "admin", "description": "...", "permissions": [...], "isActive": true }`
+
+**`PATCH /roles/:id`**
+Request: `{ "name"?: "...", "description"?: "...", "permissions"?: ["<permissionId>"], "isActive"?: boolean }`
+Response: `{ "_id": "...", "name": "...", "description": "...", "permissions": [...], "isActive": true }`
+
+**`DELETE /roles/:id`**
+Response: `{ "success": true }`
+
+## Permissions
+
+**`POST /permissions`**
+Request: `{ "name": "users:read", "description": "Read user profiles", "module": "users", "action": "read" }`
+Response: `{ "_id": "...", "name": "users:read", "description": "Read user profiles", "module": "users", "action": "read" }`
+
+**`GET /permissions`**
+Response: `[{ "_id": "...", "name": "users:read", "description": "...", "module": "users", "action": "read" }]`
+
+**`GET /permissions/:id`**
+Response: `{ "_id": "...", "name": "users:read", "description": "...", "module": "users", "action": "read" }`
+
+**`PATCH /permissions/:id`**
+Request: `{ "name"?: "...", "description"?: "...", "module"?: "...", "action"?: "..." }`
+Response: `{ "_id": "...", "name": "...", "description": "...", "module": "...", "action": "..." }`
+
+**`DELETE /permissions/:id`**
+Response: `{ "success": true }`
+
 ## Error Codes (non-exhaustive, extend as needed)
 
 | Code | Meaning |
 |---|---|
 | `VALIDATION_ERROR` | Request body failed DTO validation |
 | `UNAUTHORIZED` | Missing/invalid/expired token |
+| `FORBIDDEN` | Access denied: user lacks required role or permission |
 | `NOT_FOUND` | Resource doesn't exist or doesn't belong to user |
 | `RATE_LIMITED` | Throttle limit hit (see `ARCHITECTURE.md` §7) |
 | `AI_PROVIDER_ERROR` | Gemini call failed or returned unusable content |
+

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 @Schema({ _id: false })
 export class UserSettings {
@@ -31,6 +31,9 @@ export class User extends Document {
 
   @Prop({ type: UserSettingsSchema, required: true })
   settings: UserSettings;
+
+  @Prop({ type: Types.ObjectId, ref: 'Role', default: null, index: true })
+  roleId: Types.ObjectId | null;
 
   @Prop({ type: String, default: null })
   refreshTokenHash: string | null;

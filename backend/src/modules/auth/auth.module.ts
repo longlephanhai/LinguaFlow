@@ -8,6 +8,9 @@ import { AuthController } from './auth.controller.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
+import { RolesGuard } from './guards/roles.guard.js';
+import { PermissionsGuard } from './guards/permissions.guard.js';
+
 @Module({
   imports: [
     UsersModule,
@@ -24,7 +27,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
-  exports: [AuthService, JwtAuthGuard, JwtModule],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard, PermissionsGuard],
+  exports: [AuthService, JwtAuthGuard, RolesGuard, PermissionsGuard, JwtModule],
 })
 export class AuthModule {}

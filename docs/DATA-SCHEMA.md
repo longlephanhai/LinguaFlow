@@ -33,6 +33,9 @@ Stores account credentials and per-user study preferences.
     timezone: string,            // IANA tz string, e.g. "Asia/Ho_Chi_Minh"; used for dueDate boundary
   },
 
+  // --- Authorization ---
+  roleId: ObjectId | null, // ref: roles, indexed, default null
+
   // --- Auth ---
   refreshTokenHash: string | null, // bcrypt hash of last issued refresh token (rotation)
 
@@ -48,7 +51,8 @@ Stores account credentials and per-user study preferences.
 
 **Indexes:**
 ```
-{ email: 1 }  unique
+{ email: 1 }   unique
+{ roleId: 1 }
 ```
 
 ---
@@ -372,6 +376,70 @@ Deduplicates AI calls for identical `(selectedText, contextText)` pairs.
 
 ---
 
+## `permissions`
+
+Defines granular capabilities/permissions across modules (e.g. `users:read`, `roles:manage`).
+
+```ts
+{
+  _id: ObjectId,
+
+  // --- Identifier & Scope ---
+  name: string,        // unique action code, e.g. "users:read", "roles:create", "vocabulary:manage"
+  description: string, // human-readable explanation of what this permission grants
+  module: string,      // target domain/module: "users" | "roles" | "permissions" | "vocabulary" | etc.
+  action: string,      // action type: "create" | "read" | "update" | "delete" | "manage"
+
+  // --- Soft Delete ---
+  isDeleted: boolean,    // default false
+  deletedAt: Date | null,
+
+  // --- Timestamps ---
+  createdAt: Date,
+  updatedAt: Date,
+}
+```
+
+**Indexes:**
+```
+{ name: 1 }               unique
+{ module: 1, isDeleted: 1 }
+```
+
+---
+
+## `roles`
+
+Defines user roles and maps them to a set of granted permissions.
+
+```ts
+{
+  _id: ObjectId,
+
+  // --- Role Details ---
+  name: string,        // unique role identifier: e.g. "admin" | "user" | "moderator"
+  description: string, // description of this role's purpose
+  permissions: [ObjectId], // ref: permissions (array of Permission ObjectId)
+  isActive: boolean,   // default true — toggle whether role is currently effective
+
+  // --- Soft Delete ---
+  isDeleted: boolean,    // default false
+  deletedAt: Date | null,
+
+  // --- Timestamps ---
+  createdAt: Date,
+  updatedAt: Date,
+}
+```
+
+**Indexes:**
+```
+{ name: 1 }        unique
+{ isDeleted: 1 }
+```
+
+---
+
 ## Design Rationale — Why 3 Collections for Vocabulary
 
 A lemma (e.g. "scale") can carry **multiple meanings** ("weighing device" vs. "proportion"), and each meaning can be **captured multiple times** across different sentences (occurrences). Flattening would either:
@@ -393,6 +461,8 @@ This 3-layer constraint is a **fixed invariant** from `PRD.md §FR-VOCAB-002` an
 | Delete `writingReview` | Set `isDeleted = true` on review only |
 | Delete `quizResult` | Not permitted — quiz results are permanent learning records |
 | Delete `user` account | Soft-delete user + cascade all owned documents |
+| Delete `role` | Set `isDeleted = true` on role; users holding this role revert to default role permissions |
+| Delete `permission` | Set `isDeleted = true` on permission; automatically excluded from active role resolution |
 
 ---
 
@@ -401,3 +471,5 @@ This 3-layer constraint is a **fixed invariant** from `PRD.md §FR-VOCAB-002` an
 | Version | Date | Change |
 |---|---|---|
 | v1 | 2026-09-27 | Initial schema — full timestamps, soft-delete (`isDeleted` / `deletedAt`), enriched fields: `partOfSpeech`, `sourceTitle`, `capturedAt`, `selectedText`, `review.suspended`, `aiModel`, `quiz.status`, `quizResult.totalQuestions/timeSpentMs`, `chatSession.title`, `writingReview.wordCount`, `users.timezone/displayName/refreshTokenHash` |
+| v2 | 2026-10-18 | RBAC Authorization — added `roles` and `permissions` collections, added `roleId` reference to `users` |
+

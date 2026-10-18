@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Done: `feat(backend)` — Implemented RBAC Authorization with `RolesModule` and `PermissionsModule`, `RolesGuard`, `PermissionsGuard`, `@Roles` and `@RequirePermissions` decorators, User `roleId` association, unit and e2e test suites, and updated specifications (`DATA-SCHEMA.md`, `API-CONTRACTS.md`, `ARCHITECTURE.md`).
 - Done: `feat(frontend)` — Integrated Auth flow with Axios interceptor (silent refresh), AuthProvider context, ProtectedRoute, real API binding on LoginPage and RegisterPage, user info display and logout action on AppLayout (`frontend/src/lib/`, `LoginPage.tsx`, `RegisterPage.tsx`, `AppLayout.tsx`, `App.tsx`).
 - Done: `feat(backend)` — Implemented Auth module with register, login, refresh, logout, me endpoints, bcrypt password hashing, dual JWT tokens, JwtAuthGuard, unit tests, and e2e tests (`backend/src/modules/auth/`, `app.module.ts`, `backend/test/auth.e2e-spec.ts`).
 - Done: `chore(agents)` — Updated `write-test` skill to Vitest, updated pre-commit workflow to run both FE & BE tests via explicit `--prefix` commands (`.agents/skills/write-test/SKILL.md`, `.agents/workflows/pre-commit.md`).

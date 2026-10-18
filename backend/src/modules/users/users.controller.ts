@@ -1,9 +1,23 @@
-import { Controller, Get, Param, NotFoundException, Patch, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  NotFoundException,
+  Patch,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
+import { Types } from 'mongoose';
 import { UsersService } from './users.service.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UpdateSettingsDto } from './dto/update-settings.dto.js';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -25,7 +39,27 @@ export class UsersController {
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    const user = await this.usersService.update(id, updateUserDto);
+    const updatePayload: any = { ...updateUserDto };
+    if (updateUserDto.roleId) {
+      updatePayload.roleId = new Types.ObjectId(updateUserDto.roleId);
+    }
+
+    const user = await this.usersService.update(id, updatePayload);
+    const { passwordHash: _passwordHash, refreshTokenHash: _refreshTokenHash, ...result } = user.toObject();
+    
+    return result;
+  }
+
+  @Patch(':id/role')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async updateUserRole(
+    @Param('id') id: string,
+    @Body() updateUserRoleDto: UpdateUserRoleDto,
+  ) {
+    const user = await this.usersService.update(id, {
+      roleId: new Types.ObjectId(updateUserRoleDto.roleId) as any,
+    });
     const { passwordHash: _passwordHash, refreshTokenHash: _refreshTokenHash, ...result } = user.toObject();
     
     return result;
@@ -54,3 +88,4 @@ export class UsersController {
     return result;
   }
 }
+

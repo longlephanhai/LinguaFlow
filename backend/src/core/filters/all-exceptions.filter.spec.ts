@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ArgumentsHost, BadRequestException, HttpStatus, NotFoundException } from '@nestjs/common';
+import { ArgumentsHost, BadRequestException, HttpStatus, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { AllExceptionsFilter } from './all-exceptions.filter.js';
 
 describe('AllExceptionsFilter', () => {
@@ -58,6 +58,24 @@ describe('AllExceptionsFilter', () => {
       error: {
         code: 'NOT_FOUND',
         message: 'Vocabulary item not found',
+      },
+    });
+  });
+
+  it('should format ForbiddenException correctly with FORBIDDEN code', () => {
+    const { mockContext, mockStatus, mockJson } = createMockHost();
+    const exception = new ForbiddenException('Access denied');
+
+    filter.catch(exception, mockContext);
+
+    expect(mockStatus).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+    expect(mockJson).toHaveBeenCalledWith({
+      success: false,
+      status: HttpStatus.FORBIDDEN,
+      message: 'Access denied',
+      error: {
+        code: 'FORBIDDEN',
+        message: 'Access denied',
       },
     });
   });

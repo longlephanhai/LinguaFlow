@@ -26,7 +26,7 @@
 |---|---|
 | `frontend/` (React + TS + Vite) | SPA: Dashboard, Vocabulary Manager, Flashcard Review, Quiz, AI Chat, Writing Review, Settings |
 | `extension/` (CRXJS: React + TS + Vite, Manifest V3) | `content script`: detects text selection, shows inline popup UI. `background` (service worker): holds auth token, proxies API calls. `popup`: extension toolbar icon UI (quick vocabulary list / login) |
-| `backend/` (NestJS + TS) | REST API. Modules: `AuthModule`, `VocabularyModule`, `ReviewModule`, `QuizModule`, `ChatModule`, `WritingModule`, `DashboardModule`, `AiModule` |
+| `backend/` (NestJS + TS) | REST API. Modules: `AuthModule`, `UsersModule`, `RolesModule`, `PermissionsModule`, `VocabularyModule`, `ReviewModule`, `QuizModule`, `ChatModule`, `WritingModule`, `DashboardModule`, `AiModule` |
 | MongoDB | Persistence — see `DATA-SCHEMA.md` |
 | Gemini API | Called only through `AiModule` — never imported directly in other modules |
 
@@ -42,6 +42,9 @@ linguaflow/
 │   └── src/
 │       └── modules/
 │           ├── auth/
+│           ├── users/
+│           ├── roles/
+│           ├── permissions/
 │           ├── vocabulary/
 │           ├── review/
 │           ├── quiz/
@@ -74,6 +77,15 @@ linguaflow/
 - All API requests: `Authorization: Bearer <accessToken>` header.
 - `accessToken` short-lived (e.g., 15 min); `POST /auth/refresh` issues a new one using `refreshToken`.
 - Extension `background` service worker owns token refresh; `content` script requests the token from `background` via `chrome.runtime.sendMessage`.
+
+## 4.1 Authorization & RBAC (Role-Based Access Control)
+
+- **Roles & Permissions:** Managed dynamically via `RolesModule` and `PermissionsModule`.
+- **User Resolution:** `JwtStrategy` validates the JWT token and resolves the user along with their assigned `roleId` and populated `permissions`.
+- **Guards & Decorators:**
+  - `RolesGuard` + `@Roles(...)`: enforces role-based restrictions (e.g. `'admin'`).
+  - `PermissionsGuard` + `@RequirePermissions(...)`: enforces action-level permission checks (e.g. `'users:read'`, `'roles:manage'`).
+- **Default Fallback:** Users without an explicit `roleId` default to the standard `'user'` role with basic permissions.
 
 ## 5. Data Flow — Contextual Capture (core loop)
 

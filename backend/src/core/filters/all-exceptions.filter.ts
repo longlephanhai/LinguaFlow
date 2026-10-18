@@ -34,6 +34,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let defaultCode = 'INTERNAL_SERVER_ERROR';
     if (status === HttpStatus.BAD_REQUEST) defaultCode = 'VALIDATION_ERROR';
     else if (status === HttpStatus.UNAUTHORIZED) defaultCode = 'UNAUTHORIZED';
+    else if (status === HttpStatus.FORBIDDEN) defaultCode = 'FORBIDDEN';
     else if (status === HttpStatus.NOT_FOUND) defaultCode = 'NOT_FOUND';
     else if (status === HttpStatus.TOO_MANY_REQUESTS) defaultCode = 'RATE_LIMITED';
     else if (status === HttpStatus.BAD_GATEWAY || status === HttpStatus.SERVICE_UNAVAILABLE) defaultCode = 'AI_PROVIDER_ERROR';

@@ -215,8 +215,33 @@ describe('AuthService', () => {
         email: 'test@example.com',
         displayName: 'Test User',
         avatarUrl: null,
+        role: 'user',
+        permissions: [],
         settings: { dailyReviewGoal: 20 },
       });
+    });
+
+    it('should return populated role and permissions when user has roleId', async () => {
+      mockUsersService.findById.mockResolvedValue({
+        _id: 'user-123',
+        email: 'admin@example.com',
+        displayName: 'Admin User',
+        avatarUrl: null,
+        roleId: {
+          name: 'admin',
+          permissions: [
+            { name: 'users:read', isDeleted: false },
+            { name: 'roles:manage', isDeleted: false },
+            { name: 'deleted:perm', isDeleted: true },
+          ],
+        },
+        settings: { dailyReviewGoal: 20 },
+      });
+
+      const result = await service.getMe('user-123');
+
+      expect(result.role).toBe('admin');
+      expect(result.permissions).toEqual(['users:read', 'roles:manage']);
     });
 
     it('should throw NotFoundException if user is not found', async () => {

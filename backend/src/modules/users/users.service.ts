@@ -24,7 +24,20 @@ export class UsersService {
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.userModel.findOne({ _id: id, isDeleted: false }).exec();
+    const query = this.userModel.findOne({ _id: id, isDeleted: false });
+    if (query && typeof query.populate === 'function') {
+      return query
+        .populate({
+          path: 'roleId',
+          match: { isDeleted: false },
+          populate: {
+            path: 'permissions',
+            match: { isDeleted: false },
+          },
+        })
+        .exec();
+    }
+    return query.exec();
   }
 
   async update(id: string, updateData: Partial<User>): Promise<User> {

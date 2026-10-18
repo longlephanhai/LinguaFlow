@@ -112,11 +112,28 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
+    let roleName = 'user';
+    let permissions: string[] = [];
+
+    if (user.roleId) {
+      const populatedRole = user.roleId as any;
+      if (populatedRole && typeof populatedRole === 'object' && populatedRole.name) {
+        roleName = populatedRole.name;
+        if (Array.isArray(populatedRole.permissions)) {
+          permissions = populatedRole.permissions
+            .filter((p: any) => p && !p.isDeleted && p.name)
+            .map((p: any) => p.name);
+        }
+      }
+    }
+
     return {
       id: user._id.toString(),
       email: user.email,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
+      role: roleName,
+      permissions,
       settings: user.settings,
     };
   }

@@ -27,9 +27,27 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('User no longer exists');
     }
+
+    let roleName = 'user';
+    let permissions: string[] = [];
+
+    if (user.roleId) {
+      const populatedRole = user.roleId as any;
+      if (populatedRole && typeof populatedRole === 'object' && populatedRole.name) {
+        roleName = populatedRole.name;
+        if (Array.isArray(populatedRole.permissions)) {
+          permissions = populatedRole.permissions
+            .filter((p: any) => p && !p.isDeleted && p.name)
+            .map((p: any) => p.name);
+        }
+      }
+    }
+
     return {
       userId: payload.sub,
       email: payload.email,
+      role: roleName,
+      permissions,
     };
   }
 }
