@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Done: `feat(frontend)` — Integrated Auth flow with Axios interceptor (silent refresh), AuthProvider context, ProtectedRoute, real API binding on LoginPage and RegisterPage, user info display and logout action on AppLayout (`frontend/src/lib/`, `LoginPage.tsx`, `RegisterPage.tsx`, `AppLayout.tsx`, `App.tsx`).
+- Done: `feat(backend)` — Implemented Auth module with register, login, refresh, logout, me endpoints, bcrypt password hashing, dual JWT tokens, JwtAuthGuard, unit tests, and e2e tests (`backend/src/modules/auth/`, `app.module.ts`, `backend/test/auth.e2e-spec.ts`).
+- Done: `chore(agents)` — Updated `write-test` skill to Vitest, updated pre-commit workflow to run both FE & BE tests via explicit `--prefix` commands (`.agents/skills/write-test/SKILL.md`, `.agents/workflows/pre-commit.md`).
 - Done: `feat(backend)` — Implemented Users module with User schema, DTO validation, service, controller, and unit tests (`backend/src/modules/users/`, `app.module.ts`, `API-CONTRACTS.md`).
 
 - Done: `feat(frontend)` — Configured Vitest, React Testing Library, and added sample unit test (`package.json`, `vite.config.ts`, `setupTests.ts`, `App.test.tsx`).
@@ -42,4 +45,4 @@
 
 - Exact rate-limit numbers per endpoint — tune after observing real Gemini usage/cost.
 - Extension supported-sites scope (all websites vs. allowlist) — MVP assumes all websites.
-- No automated e2e tests written yet (rules defined in `PROJECT-RULES.md`, implementation pending).
+- Automated e2e test baseline established with Auth module (`backend/test/auth.e2e-spec.ts`); expanding to upcoming domain modules as they are developed.
