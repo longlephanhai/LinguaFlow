@@ -15,6 +15,7 @@ describe('VocabularyController (e2e)', () => {
 
   beforeEach(async () => {
     mockVocabService = {
+      lookup: vi.fn(),
       saveOccurrence: vi.fn(),
       findAll: vi.fn(),
       findOccurrences: vi.fn(),
@@ -59,6 +60,42 @@ describe('VocabularyController (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  describe('POST /vocabulary/lookup', () => {
+    it('should return in-context explanation envelope', async () => {
+      mockVocabService.lookup.mockResolvedValue({
+        lemma: 'scale',
+        meaning: 'to expand proportionally',
+        example: 'We need to scale.',
+        cached: false,
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/vocabulary/lookup')
+        .send({
+          selectedText: 'scale',
+          contextText: 'We need to scale this system.',
+          sourceUrl: 'https://example.com',
+        })
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.lemma).toBe('scale');
+      expect(response.body.data.meaning).toBe('to expand proportionally');
+    });
+
+    it('should fail validation on missing contextText', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/vocabulary/lookup')
+        .send({
+          selectedText: 'scale',
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
   });
 
   describe('POST /vocabulary/occurrences', () => {

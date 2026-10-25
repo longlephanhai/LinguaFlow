@@ -22,13 +22,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getResponse()
         : { message: 'Internal server error' };
 
-    const message =
+    const rawMessage =
       typeof exceptionResponse === 'string'
         ? exceptionResponse
-        : (exceptionResponse as any).message || 'Internal server error';
+        : (exceptionResponse as any).error?.message ||
+          (exceptionResponse as any).message ||
+          'Internal server error';
 
     // Xử lý trường hợp message là mảng (thường thấy khi dùng class-validator)
-    const finalMessage = Array.isArray(message) ? message[0] : message;
+    const finalMessage = Array.isArray(rawMessage) ? rawMessage[0] : rawMessage;
 
     // Map HTTP status or exception to defined error codes in @docs/API-CONTRACTS.md
     let defaultCode = 'INTERNAL_SERVER_ERROR';
@@ -40,8 +42,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     else if (status === HttpStatus.BAD_GATEWAY || status === HttpStatus.SERVICE_UNAVAILABLE) defaultCode = 'AI_PROVIDER_ERROR';
 
     const code =
-      typeof exceptionResponse === 'object' && (exceptionResponse as any).code
-        ? (exceptionResponse as any).code
+      typeof exceptionResponse === 'object' && ((exceptionResponse as any).error?.code || (exceptionResponse as any).code)
+        ? (exceptionResponse as any).error?.code || (exceptionResponse as any).code
         : defaultCode;
 
     response.status(status).json({

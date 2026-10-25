@@ -15,11 +15,17 @@ import { VocabularyService } from './vocabulary.service.js';
 import { SaveOccurrenceDto } from './dto/save-occurrence.dto.js';
 import { QueryVocabularyDto } from './dto/query-vocabulary.dto.js';
 import { UpdateOccurrenceDto } from './dto/update-occurrence.dto.js';
+import { LookupVocabularyDto } from './dto/lookup-vocabulary.dto.js';
 
 @Controller('vocabulary')
 @UseGuards(JwtAuthGuard)
 export class VocabularyController {
   constructor(private readonly vocabularyService: VocabularyService) {}
+
+  @Post('lookup')
+  async lookup(@Body() dto: LookupVocabularyDto) {
+    return this.vocabularyService.lookup(dto);
+  }
 
   @Post('occurrences')
   async saveOccurrence(

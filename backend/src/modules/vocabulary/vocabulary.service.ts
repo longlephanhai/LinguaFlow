@@ -7,6 +7,8 @@ import { Occurrence } from './schemas/occurrence.schema.js';
 import { SaveOccurrenceDto } from './dto/save-occurrence.dto.js';
 import { QueryVocabularyDto } from './dto/query-vocabulary.dto.js';
 import { UpdateOccurrenceDto } from './dto/update-occurrence.dto.js';
+import { LookupVocabularyDto } from './dto/lookup-vocabulary.dto.js';
+import { AiService } from '../ai/ai.service.js';
 
 @Injectable()
 export class VocabularyService {
@@ -17,7 +19,12 @@ export class VocabularyService {
     private readonly meaningModel: Model<Meaning>,
     @InjectModel(Occurrence.name)
     private readonly occurrenceModel: Model<Occurrence>,
+    private readonly aiService: AiService,
   ) {}
+
+  async lookup(dto: LookupVocabularyDto) {
+    return this.aiService.lookupInContext(dto.selectedText, dto.contextText);
+  }
 
   async saveOccurrence(dto: SaveOccurrenceDto, userId: string) {
     const userObjectId = new Types.ObjectId(userId);

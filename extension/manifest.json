@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "LinguaFlow — In-Context Vocabulary Capture",
+  "version": "1.0.0",
+  "description": "Capture words and their context sentences while reading with instant AI explanation and spaced repetition sync.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LinguaFlow"
+  }
+}

@@ -9,6 +9,7 @@ describe('VocabularyController', () => {
 
   beforeEach(() => {
     mockService = {
+      lookup: vi.fn(),
       saveOccurrence: vi.fn(),
       findAll: vi.fn(),
       findOccurrences: vi.fn(),
@@ -18,6 +19,18 @@ describe('VocabularyController', () => {
     };
 
     controller = new VocabularyController(mockService);
+  });
+
+  it('lookup should delegate to service.lookup', async () => {
+    const dto = {
+      selectedText: 'scale',
+      contextText: 'We need to scale.',
+    };
+    mockService.lookup.mockResolvedValue({ lemma: 'scale', meaning: 'to grow' });
+
+    const result = await controller.lookup(dto);
+    expect(mockService.lookup).toHaveBeenCalledWith(dto);
+    expect(result).toEqual({ lemma: 'scale', meaning: 'to grow' });
   });
 
   it('saveOccurrence should delegate to service.saveOccurrence', async () => {

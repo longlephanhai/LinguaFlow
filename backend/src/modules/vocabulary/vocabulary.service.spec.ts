@@ -41,11 +41,32 @@ describe('VocabularyService', () => {
       updateMany: vi.fn(),
     };
 
+    const mockAiService = {
+      lookupInContext: vi.fn().mockResolvedValue({
+        lemma: 'scale',
+        meaning: 'to expand proportionally',
+        example: 'We need to scale.',
+        cached: false,
+      }),
+    };
+
     service = new VocabularyService(
       mockVocabItemModel as any,
       mockMeaningModel as any,
       mockOccurrenceModel as any,
+      mockAiService as any,
     );
+  });
+
+  describe('lookup', () => {
+    it('should delegate lookup to AiService', async () => {
+      const res = await service.lookup({
+        selectedText: 'scale',
+        contextText: 'We need to scale.',
+      });
+      expect(res.lemma).toBe('scale');
+      expect(res.meaning).toBe('to expand proportionally');
+    });
   });
 
   describe('saveOccurrence', () => {

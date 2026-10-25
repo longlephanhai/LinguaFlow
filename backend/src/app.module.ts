@@ -9,6 +9,7 @@ import { PermissionsModule } from './modules/permissions/permissions.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module.js';
 import { ReviewModule } from './modules/review/review.module.js';
+import { AiModule } from './modules/ai/ai.module.js';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ReviewModule } from './modules/review/review.module.js';
     RolesModule,
     VocabularyModule,
     ReviewModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

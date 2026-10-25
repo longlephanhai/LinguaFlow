@@ -7,10 +7,8 @@ import {
   VocabularyItemSchema,
 } from './schemas/vocabulary-item.schema.js';
 import { Meaning, MeaningSchema } from './schemas/meaning.schema.js';
-import {
-  Occurrence,
-  OccurrenceSchema,
-} from './schemas/occurrence.schema.js';
+import { Occurrence, OccurrenceSchema } from './schemas/occurrence.schema.js';
+import { AiModule } from '../ai/ai.module.js';
 
 @Module({
   imports: [
@@ -19,6 +17,7 @@ import {
       { name: Meaning.name, schema: MeaningSchema },
       { name: Occurrence.name, schema: OccurrenceSchema },
     ]),
+    AiModule,
   ],
   controllers: [VocabularyController],
   providers: [VocabularyService],
