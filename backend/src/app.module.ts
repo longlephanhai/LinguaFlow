@@ -10,6 +10,7 @@ import { RolesModule } from './modules/roles/roles.module.js';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module.js';
 import { ReviewModule } from './modules/review/review.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
+import { QuizModule } from './modules/quiz/quiz.module.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AiModule } from './modules/ai/ai.module.js';
     VocabularyModule,
     ReviewModule,
     AiModule,
+    QuizModule,
   ],
   controllers: [AppController],
   providers: [AppService],

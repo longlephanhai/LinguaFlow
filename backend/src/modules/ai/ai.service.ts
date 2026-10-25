@@ -64,4 +64,8 @@ export class AiService {
       cached: false,
     };
   }
+
+  async generateQuiz(items: import('./ai-provider.interface.js').QuizItemInput[], count: number) {
+    return this.aiProvider.generateQuiz(items, count);
+  }
 }

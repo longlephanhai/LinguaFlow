@@ -91,7 +91,11 @@ Request: `{ "questionIndex": 0, "selectedIndex": 2 }`
 Response: `{ "correct": false, "correctIndex": 1, "explanation": "..." }`
 
 **`GET /quiz/:id/result`**
-Response: `{ "score": 7, "total": 10, "completedAt": "..." }`
+Response: `{ "quizId": "...", "score": 7, "total": 10, "completedAt": "...", "answers": [{ "questionIndex": 0, "selectedIndex": 1, "correct": true }] }`
+
+**`GET /quiz/history`**
+Query: `?page=1&limit=10`
+Response: `{ "items": [{ "quizId": "...", "score": 7, "total": 10, "scope": "all", "completedAt": "..." }], "total": 1, "page": 1, "limit": 10, "totalPages": 1 }`
 
 ## Chat
 
