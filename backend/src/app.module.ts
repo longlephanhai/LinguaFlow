@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { PermissionsModule } from './modules/permissions/permissions.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
+import { VocabularyModule } from './modules/vocabulary/vocabulary.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RolesModule } from './modules/roles/roles.module.js';
     AuthModule,
     PermissionsModule,
     RolesModule,
+    VocabularyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

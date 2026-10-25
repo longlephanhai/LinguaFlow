@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Done: `feat(frontend)` — Integrated `VocabularyPage` with real backend API, added modal for creating new vocabulary occurrences, drawer for inspecting context occurrences & meanings, search, pagination, and delete handling (`frontend/src/pages/VocabularyPage.tsx`, `frontend/src/lib/vocabulary.api.ts`).
+- Done: `feat(backend)` — Implemented `VocabularyModule` enforcing 3-layer architecture (`VocabularyItem` -> `Meaning` -> `Occurrence`), cascading soft deletes, DTOs, unit tests, and e2e test suite (`backend/src/modules/vocabulary/`, `app.module.ts`, `backend/test/vocabulary.e2e-spec.ts`).
 - Done: `feat(backend)` — Implemented RBAC Authorization with `RolesModule` and `PermissionsModule`, `RolesGuard`, `PermissionsGuard`, `@Roles` and `@RequirePermissions` decorators, User `roleId` association, unit and e2e test suites, and updated specifications (`DATA-SCHEMA.md`, `API-CONTRACTS.md`, `ARCHITECTURE.md`).
 - Done: `feat(frontend)` — Integrated Auth flow with Axios interceptor (silent refresh), AuthProvider context, ProtectedRoute, real API binding on LoginPage and RegisterPage, user info display and logout action on AppLayout (`frontend/src/lib/`, `LoginPage.tsx`, `RegisterPage.tsx`, `AppLayout.tsx`, `App.tsx`).
 - Done: `feat(backend)` — Implemented Auth module with register, login, refresh, logout, me endpoints, bcrypt password hashing, dual JWT tokens, JwtAuthGuard, unit tests, and e2e tests (`backend/src/modules/auth/`, `app.module.ts`, `backend/test/auth.e2e-spec.ts`).
