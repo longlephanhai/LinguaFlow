@@ -6,9 +6,9 @@ import {
   Param,
   Query,
   UseGuards,
-  Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { QuizService } from './quiz.service.js';
 import { GenerateQuizDto } from './dto/generate-quiz.dto.js';
 import { AnswerQuizDto } from './dto/answer-quiz.dto.js';
@@ -20,8 +20,8 @@ export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
   @Post('generate')
-  async generate(@Body() dto: GenerateQuizDto, @Request() req: any) {
-    const userId = req.user.id || req.user.sub || req.user._id;
+  async generate(@Body() dto: GenerateQuizDto, @CurrentUser() user: any) {
+    const userId = user.userId || user.id || user.sub;
     return this.quizService.generate(userId, dto);
   }
 
@@ -29,21 +29,21 @@ export class QuizController {
   async answer(
     @Param('id') id: string,
     @Body() dto: AnswerQuizDto,
-    @Request() req: any,
+    @CurrentUser() user: any,
   ) {
-    const userId = req.user.id || req.user.sub || req.user._id;
+    const userId = user.userId || user.id || user.sub;
     return this.quizService.answer(userId, id, dto);
   }
 
   @Get('history')
-  async getHistory(@Query() query: QuizHistoryQueryDto, @Request() req: any) {
-    const userId = req.user.id || req.user.sub || req.user._id;
+  async getHistory(@Query() query: QuizHistoryQueryDto, @CurrentUser() user: any) {
+    const userId = user.userId || user.id || user.sub;
     return this.quizService.getHistory(userId, query);
   }
 
   @Get(':id/result')
-  async getResult(@Param('id') id: string, @Request() req: any) {
-    const userId = req.user.id || req.user.sub || req.user._id;
+  async getResult(@Param('id') id: string, @CurrentUser() user: any) {
+    const userId = user.userId || user.id || user.sub;
     return this.quizService.getResult(userId, id);
   }
 }
