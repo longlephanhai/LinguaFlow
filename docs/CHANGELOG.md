@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Done: `feat(frontend)` — Connected `FlashcardPage` with real Review API, progressive reveal with sentence context highlighting, SM-2 feedback, card suspension, session completion screen, and unit tests (`frontend/src/pages/FlashcardPage.tsx`, `frontend/src/lib/review.api.ts`, `frontend/src/pages/FlashcardPage.test.tsx`).
+- Done: `feat(backend)` — Implemented `ReviewModule` with simplified SM-2 algorithm scheduler (`srs.scheduler.ts`), `GET /review/due`, `POST /review/:occurrenceId/result`, `PATCH /review/:occurrenceId/suspend`, unit tests, and e2e test suite (`backend/src/modules/review/`, `app.module.ts`, `backend/test/review.e2e-spec.ts`).
 - Done: `feat(frontend)` — Integrated `VocabularyPage` with real backend API, added modal for creating new vocabulary occurrences, drawer for inspecting context occurrences & meanings, search, pagination, and delete handling (`frontend/src/pages/VocabularyPage.tsx`, `frontend/src/lib/vocabulary.api.ts`).
 - Done: `feat(backend)` — Implemented `VocabularyModule` enforcing 3-layer architecture (`VocabularyItem` -> `Meaning` -> `Occurrence`), cascading soft deletes, DTOs, unit tests, and e2e test suite (`backend/src/modules/vocabulary/`, `app.module.ts`, `backend/test/vocabulary.e2e-spec.ts`).
 - Done: `feat(backend)` — Implemented RBAC Authorization with `RolesModule` and `PermissionsModule`, `RolesGuard`, `PermissionsGuard`, `@Roles` and `@RequirePermissions` decorators, User `roleId` association, unit and e2e test suites, and updated specifications (`DATA-SCHEMA.md`, `API-CONTRACTS.md`, `ARCHITECTURE.md`).

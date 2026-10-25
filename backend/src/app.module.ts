@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { PermissionsModule } from './modules/permissions/permissions.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module.js';
+import { ReviewModule } from './modules/review/review.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module.js';
     PermissionsModule,
     RolesModule,
     VocabularyModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],

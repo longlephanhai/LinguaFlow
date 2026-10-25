@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, ProtectedRoute } from './lib/auth';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
@@ -23,7 +23,8 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/vocabulary" element={<VocabularyPage />} />
-              <Route path="/review" element={<FlashcardPage />} />
+              <Route path="/flashcards" element={<FlashcardPage />} />
+              <Route path="/review" element={<Navigate to="/flashcards" replace />} />
               {/* Add future protected routes here */}
             </Route>
           </Route>

@@ -69,11 +69,15 @@ Request: `{ "sentence"?: "...", "meaning"?: "..." }` → `{ "success": true }`
 ## Review
 
 **`GET /review/due`**
-Response: `{ "occurrences": [{ "id": "...", "lemma": "scale", "sentence": "...", "meaning": "..." }] }`
+Response: `{ "occurrences": [{ "id": "...", "lemma": "scale", "partOfSpeech": "verb", "selectedText": "scaling", "sentence": "...", "meaning": "...", "example": "...", "sourceUrl": "...", "sourceTitle": "..." }] }`
 
 **`POST /review/:occurrenceId/result`**
 Request: `{ "remembered": true }`
 Response: `{ "nextDueDate": "2026-09-27T00:00:00Z", "intervalDays": 6 }`
+
+**`PATCH /review/:occurrenceId/suspend`**
+Request: `{ "suspended": true }`
+Response: `{ "success": true, "suspended": true }`
 
 ## Quiz
 
