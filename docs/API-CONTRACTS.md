@@ -112,7 +112,42 @@ Response: `{ "feedback": "...", "suggestions": ["Use 'went' without 'have' for s
 ## Dashboard
 
 **`GET /dashboard/stats`**
-Response: `{ "dueCount": 12, "totalSaved": 240, "totalReviewed": 180, "recentQuizzes": [...], "recentActivity": [...] }`
+Response:
+```json
+{
+  "dueCount": 12,
+  "totalSaved": 240,
+  "totalReviewed": 180,
+  "todayReviewedCount": 5,
+  "dailyReviewGoal": 20,
+  "streakDays": 3,
+  "recentQuizzes": [
+    {
+      "quizId": "...",
+      "score": 8,
+      "total": 10,
+      "completedAt": "2026-10-31T14:00:00.000Z"
+    }
+  ],
+  "recentActivity": [
+    {
+      "id": "...",
+      "type": "saved",
+      "title": "Saved 'scale'",
+      "description": "to increase in size...",
+      "timestamp": "2026-10-31T14:30:00.000Z"
+    }
+  ],
+  "weeklyProgress": [
+    {
+      "date": "2026-10-31",
+      "savedCount": 2,
+      "reviewedCount": 5,
+      "quizCount": 1
+    }
+  ]
+}
+```
 
 ## Roles
 

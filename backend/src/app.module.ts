@@ -11,6 +11,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module.js';
 import { ReviewModule } from './modules/review/review.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
 import { QuizModule } from './modules/quiz/quiz.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { QuizModule } from './modules/quiz/quiz.module.js';
     ReviewModule,
     AiModule,
     QuizModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

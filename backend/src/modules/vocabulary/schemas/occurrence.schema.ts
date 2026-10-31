@@ -58,6 +58,9 @@ export class Occurrence extends Document {
 
   @Prop({ type: Date, default: null })
   deletedAt: Date | null;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const OccurrenceSchema = SchemaFactory.createForClass(Occurrence);

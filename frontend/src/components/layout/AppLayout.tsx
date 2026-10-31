@@ -1,7 +1,9 @@
-import { AppShell, Burger, Group, Title, NavLink, ActionIcon, useMantineColorScheme, Text, Box } from '@mantine/core';
+import { useState, useEffect } from 'react';
+import { AppShell, Burger, Group, Title, NavLink, ActionIcon, useMantineColorScheme, Text, Box, Badge } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
+import { reviewApi } from '../../lib/review.api';
 import { 
   IconDashboard, 
   IconBook, 
@@ -31,6 +33,25 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [dueCount, setDueCount] = useState<number>(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchDue = async () => {
+      try {
+        const res = await reviewApi.getDueOccurrences();
+        if (mounted && res?.occurrences) {
+          setDueCount(res.occurrences.length);
+        }
+      } catch {
+        // Silently ignore navigation badge fetch errors
+      }
+    };
+    fetchDue();
+    return () => {
+      mounted = false;
+    };
+  }, [location.pathname]);
 
   const links = navData.map((item) => (
     <NavLink
@@ -38,6 +59,13 @@ export function AppLayout() {
       active={location.pathname === item.link}
       label={item.label}
       leftSection={<item.icon size="1.2rem" stroke={1.5} />}
+      rightSection={
+        item.link === '/flashcards' && dueCount > 0 ? (
+          <Badge size="xs" color="blue" variant="filled">
+            {dueCount}
+          </Badge>
+        ) : null
+      }
       onClick={() => {
         navigate(item.link);
         if (opened) toggle();
