@@ -40,6 +40,7 @@ export class AuthService {
         email: newUser.email,
         displayName: newUser.displayName,
         avatarUrl: newUser.avatarUrl,
+        settings: newUser.settings,
       },
     };
   }
@@ -66,6 +67,7 @@ export class AuthService {
         email: user.email,
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
+        settings: user.settings,
       },
     };
   }

@@ -13,6 +13,7 @@ export interface User {
   email: string;
   displayName: string;
   avatarUrl: string | null;
+  role?: string;
   settings?: UserSettings;
 }
 
@@ -23,6 +24,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updatedFields: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,6 +89,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const updateUser = (updatedFields: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const nextUser = {
+        ...prev,
+        ...updatedFields,
+        settings: {
+          ...prev.settings,
+          ...updatedFields.settings,
+        } as UserSettings,
+      };
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  };
+
+  const refreshUser = async () => {
+    try {
+      const profile = await api.get('/auth/me');
+      setUser(profile as unknown as User);
+      localStorage.setItem('user', JSON.stringify(profile));
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -95,6 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        updateUser,
+        refreshUser,
       }}
     >
       {children}

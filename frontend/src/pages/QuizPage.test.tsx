@@ -14,6 +14,12 @@ vi.mock('../lib/quiz.api', () => ({
   },
 }));
 
+vi.mock('../lib/auth', () => ({
+  useAuth: () => ({
+    user: { id: 'u1', settings: { quizDefaultCount: 10 } },
+  }),
+}));
+
 describe('QuizPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();

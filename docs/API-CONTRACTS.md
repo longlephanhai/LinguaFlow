@@ -30,18 +30,18 @@ Response: `{ "accessToken": "..." }`
 
 ## Users
 
-**`GET /users/:id`**
+**`GET /users/:id`** (or `GET /users/me`)
 Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": null, "roleId": "...", "settings": {...} }`
 
-**`PATCH /users/:id`**
-Request: `{ "displayName"?: "...", "avatarUrl"?: "...", "roleId"?: "..." }`
+**`PATCH /users/:id`** (or `PATCH /users/me`)
+Request: `{ "displayName"?: "...", "avatarUrl"?: "..." }`
 Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": "...", "roleId": "...", "settings": {...} }`
 
-**`PATCH /users/:id/role`**
+**`PATCH /users/:id/role`** (Admin only)
 Request: `{ "roleId": "..." }`
 Response: `{ "_id": "...", "email": "...", "roleId": "...", "settings": {...} }`
 
-**`PATCH /users/:id/settings`**
+**`PATCH /users/:id/settings`** (or `PATCH /users/me/settings`)
 Request: `{ "dailyReviewGoal"?: 20, "quizDefaultCount"?: 10, "timezone"?: "UTC" }`
 Response: `{ "_id": "...", "email": "...", "displayName": "...", "avatarUrl": "...", "settings": {...} }`
 

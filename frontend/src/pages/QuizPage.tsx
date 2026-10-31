@@ -40,15 +40,17 @@ import {
   type AnswerQuizResponse,
   type QuizHistoryItem,
 } from '../lib/quiz.api';
+import { useAuth } from '../lib/auth';
 
 type QuizState = 'config' | 'playing' | 'completed';
 
 export function QuizPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Configuration state
   const [scope, setScope] = useState<'all' | 'recent'>('all');
-  const [questionCount, setQuestionCount] = useState<number>(10);
+  const [questionCount, setQuestionCount] = useState<number>(user?.settings?.quizDefaultCount || 10);
   const [quizState, setQuizState] = useState<QuizState>('config');
 
   // Active quiz state

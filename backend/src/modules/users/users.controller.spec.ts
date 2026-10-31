@@ -126,5 +126,63 @@ describe('UsersController', () => {
         controller.updateSettings('999', { dailyReviewGoal: 30 }),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('should resolve "me" to currentUserId for updateSettings', async () => {
+      const initialUser = {
+        toObject: () => ({
+          _id: 'current_user_1',
+          settings: { dailyReviewGoal: 20 },
+        }),
+      };
+      const updatedUser = {
+        toObject: () => ({
+          _id: 'current_user_1',
+          settings: { dailyReviewGoal: 25 },
+        }),
+      };
+      mockUsersService.findById.mockResolvedValue(initialUser);
+      mockUsersService.update.mockResolvedValue(updatedUser);
+
+      const result = await controller.updateSettings('me', { dailyReviewGoal: 25 }, 'current_user_1');
+
+      expect(mockUsersService.findById).toHaveBeenCalledWith('current_user_1');
+      expect(mockUsersService.update).toHaveBeenCalledWith('current_user_1', {
+        settings: { dailyReviewGoal: 25 },
+      });
+      expect(result.settings.dailyReviewGoal).toBe(25);
+    });
+  });
+
+  describe('me alias', () => {
+    it('should resolve "me" to currentUserId in getUser', async () => {
+      const mockDoc = {
+        toObject: () => ({
+          _id: 'current_user_1',
+          email: 'me@example.com',
+          displayName: 'Current User',
+        }),
+      };
+      mockUsersService.findById.mockResolvedValue(mockDoc);
+
+      const result = await controller.getUser('me', 'current_user_1');
+
+      expect(mockUsersService.findById).toHaveBeenCalledWith('current_user_1');
+      expect(result.displayName).toBe('Current User');
+    });
+
+    it('should resolve "me" to currentUserId in updateUser', async () => {
+      const mockDoc = {
+        toObject: () => ({
+          _id: 'current_user_1',
+          displayName: 'New Name',
+        }),
+      };
+      mockUsersService.update.mockResolvedValue(mockDoc);
+
+      const result = await controller.updateUser('me', { displayName: 'New Name' }, 'current_user_1');
+
+      expect(mockUsersService.update).toHaveBeenCalledWith('current_user_1', { displayName: 'New Name' });
+      expect(result.displayName).toBe('New Name');
+    });
   });
 });

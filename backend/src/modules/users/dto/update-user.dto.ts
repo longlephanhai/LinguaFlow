@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUrl, IsMongoId } from 'class-validator';
+import { IsString, IsOptional, IsUrl, IsMongoId, ValidateIf } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -6,6 +6,7 @@ export class UpdateUserDto {
   displayName?: string;
 
   @IsOptional()
+  @ValidateIf((o) => typeof o.avatarUrl === 'string' && o.avatarUrl.trim().length > 0)
   @IsUrl({}, { message: 'avatarUrl must be a valid URL' })
   avatarUrl?: string;
 

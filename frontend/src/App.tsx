@@ -9,6 +9,7 @@ import { FlashcardPage } from './pages/FlashcardPage';
 import { QuizPage } from './pages/QuizPage';
 import { ChatPage } from './pages/ChatPage';
 import { WritingPage } from './pages/WritingPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { AppLayout } from './components/layout/AppLayout';
 import './App.css';
 
@@ -31,7 +32,7 @@ function App() {
               <Route path="/quiz" element={<QuizPage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/writing" element={<WritingPage />} />
-              {/* Add future protected routes here */}
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>
         </Routes>
