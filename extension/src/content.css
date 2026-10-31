@@ -186,3 +186,95 @@
   border-radius: 6px;
   margin-bottom: 8px;
 }
+
+/* ========================================================
+   Phase 2: YouTube Subtitle Overlay & Interactive Player
+   ======================================================== */
+#linguaflow-yt-subtitles {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483640;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 85%;
+  pointer-events: auto;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: bottom 0.2s ease;
+}
+
+.lf-yt-sub-line {
+  display: inline-block;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.lf-yt-sub-line.lf-primary {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f8fafc;
+  font-size: 19px;
+  font-weight: 600;
+  padding: 6px 14px;
+  line-height: 1.4;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.lf-yt-word {
+  display: inline-block;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  color: #f1f5f9;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.1s ease;
+}
+
+.lf-yt-word:hover {
+  background: #2563eb;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.lf-yt-word:active {
+  transform: translateY(0);
+}
+
+.lf-yt-sub-line.lf-secondary {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.75);
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lf-yt-hotkeys-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  display: flex;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 2px 8px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+#linguaflow-yt-subtitles:hover .lf-yt-hotkeys-hint {
+  opacity: 1;
+}
+
+.lf-yt-hotkey {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+

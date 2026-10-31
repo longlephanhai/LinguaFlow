@@ -177,5 +177,30 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (action === 'FETCH_VIDEO_TRANSCRIPT') {
+    authenticatedFetch('/video/transcript', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then((body) => {
+        if (body.success && body.data) {
+          sendResponse({ success: true, data: body.data });
+        } else {
+          sendResponse({
+            success: false,
+            error: body.error?.message || 'Failed to fetch transcript',
+          });
+        }
+      })
+      .catch((err) => {
+        sendResponse({
+          success: false,
+          error: err.message === 'UNAUTHORIZED' ? 'UNAUTHORIZED' : err.message,
+        });
+      });
+    return true;
+  }
+
   return false;
 });

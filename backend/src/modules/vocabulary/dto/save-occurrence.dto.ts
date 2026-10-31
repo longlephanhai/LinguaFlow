@@ -1,4 +1,38 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+
+export class MediaMetadataDto {
+  @IsOptional()
+  @IsIn(['youtube', 'netflix', 'web'])
+  provider?: 'youtube' | 'netflix' | 'web';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  videoId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  timestampSeconds?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  videoTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  audioSnippetUrl?: string;
+}
 
 export class SaveOccurrenceDto {
   @IsString()
@@ -40,4 +74,10 @@ export class SaveOccurrenceDto {
   @IsOptional()
   @MaxLength(500)
   selectedText?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MediaMetadataDto)
+  mediaMetadata?: MediaMetadataDto;
 }
+

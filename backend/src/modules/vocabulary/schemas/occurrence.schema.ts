@@ -24,6 +24,26 @@ export class ReviewState {
 
 export const ReviewStateSchema = SchemaFactory.createForClass(ReviewState);
 
+@Schema({ _id: false })
+export class MediaMetadata {
+  @Prop({ type: String, enum: ['youtube', 'netflix', 'web'], default: null })
+  provider: 'youtube' | 'netflix' | 'web' | null;
+
+  @Prop({ type: String, default: null, trim: true })
+  videoId: string | null;
+
+  @Prop({ type: Number, default: null })
+  timestampSeconds: number | null;
+
+  @Prop({ type: String, default: null, trim: true })
+  videoTitle: string | null;
+
+  @Prop({ type: String, default: null, trim: true })
+  audioSnippetUrl: string | null;
+}
+
+export const MediaMetadataSchema = SchemaFactory.createForClass(MediaMetadata);
+
 @Schema({ timestamps: true, collection: 'occurrences' })
 export class Occurrence extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Meaning', required: true, index: true })
@@ -49,6 +69,9 @@ export class Occurrence extends Document {
 
   @Prop({ type: Date, default: () => new Date() })
   capturedAt: Date;
+
+  @Prop({ type: MediaMetadataSchema, default: null })
+  mediaMetadata?: MediaMetadata | null;
 
   @Prop({ type: ReviewStateSchema, default: () => ({}) })
   review: ReviewState;

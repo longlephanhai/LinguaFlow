@@ -1,4 +1,25 @@
-// Content Script enforcing Architecture §8 Privacy Boundary
+// Content Script enforcing Architecture §8 Privacy Boundary & Phase 2 Video Features
+
+export interface MediaMetadataPayload {
+  provider: 'youtube' | 'netflix' | 'web';
+  videoId: string | null;
+  timestampSeconds: number | null;
+  videoTitle: string | null;
+  audioSnippetUrl?: string | null;
+}
+
+export interface SubtitleSegment {
+  index: number;
+  startSeconds: number;
+  endSeconds: number;
+  text: string;
+  translation: string | null;
+}
+
+export interface SubtitleToken {
+  text: string;
+  isWord: boolean;
+}
 
 let triggerBtn: HTMLElement | null = null;
 let popupCard: HTMLElement | null = null;
@@ -18,21 +39,9 @@ function removeElements() {
  * Extracts immediate sentence context around selected text without reading full DOM.
  * Adheres strictly to ARCHITECTURE.md §8 & PRD FR-EXT-002.
  */
-function extractContext(selection: Selection, selectedText: string): string {
-  const anchorNode = selection.anchorNode;
-  if (!anchorNode) return selectedText;
-
-  const parentElement = anchorNode.nodeType === Node.TEXT_NODE
-    ? anchorNode.parentElement
-    : (anchorNode as HTMLElement);
-
-  if (!parentElement) return selectedText;
-
-  // Only read the immediate parent element's textContent (capped at 300 chars)
-  const parentText = parentElement.textContent || '';
+export function extractContextFromText(parentText: string, selectedText: string): string {
   if (!parentText) return selectedText;
 
-  // Extract the sentence containing the selected text
   const sentences = parentText.split(/(?<=[.!?])\s+/);
   const matchedSentence = sentences.find((s) => s.includes(selectedText));
 
@@ -40,7 +49,6 @@ function extractContext(selection: Selection, selectedText: string): string {
     return matchedSentence.trim();
   }
 
-  // Fallback to substring around selected text (max 300 chars)
   const idx = parentText.indexOf(selectedText);
   if (idx !== -1) {
     const start = Math.max(0, idx - 100);
@@ -51,71 +59,113 @@ function extractContext(selection: Selection, selectedText: string): string {
   return selectedText;
 }
 
-document.addEventListener('mouseup', (e: MouseEvent) => {
-  // If clicking inside our popup, ignore
-  if (popupCard && popupCard.contains(e.target as Node)) {
-    return;
+function extractContext(selection: Selection, selectedText: string): string {
+  const anchorNode = selection.anchorNode;
+  if (!anchorNode) return selectedText;
+
+  const parentElement =
+    anchorNode.nodeType === Node.TEXT_NODE
+      ? anchorNode.parentElement
+      : (anchorNode as HTMLElement);
+
+  if (!parentElement) return selectedText;
+
+  const parentText = parentElement.textContent || '';
+  return extractContextFromText(parentText, selectedText);
+}
+
+/**
+ * Tokenizes subtitle sentence into words and whitespace/punctuation tokens.
+ */
+export function tokenizeSubtitleSentence(sentence: string): SubtitleToken[] {
+  if (!sentence) return [];
+  const tokens: SubtitleToken[] = [];
+  const regex = /([a-zA-Z0-9'’-]+)|([^a-zA-Z0-9'’-]+)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(sentence)) !== null) {
+    if (match[1]) {
+      tokens.push({ text: match[1], isWord: true });
+    } else if (match[2]) {
+      tokens.push({ text: match[2], isWord: false });
+    }
   }
+  return tokens;
+}
 
-  const selection = window.getSelection();
-  const selectedText = selection?.toString().trim();
+if (typeof document !== 'undefined') {
+  document.addEventListener('mouseup', (e: MouseEvent) => {
+    // If clicking inside our popup or video subtitle overlay, ignore
+    if (popupCard && popupCard.contains(e.target as Node)) {
+      return;
+    }
 
-  // FR-EXT-001 AC-2: Selection must be non-empty, non-whitespace, and <= 200 chars
-  if (!selection || !selectedText || selectedText.length > 200) {
+    const subContainer = document.getElementById('linguaflow-yt-subtitles');
+    if (subContainer && subContainer.contains(e.target as Node)) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    const selectedText = selection?.toString().trim();
+
+    // FR-EXT-001 AC-2: Selection must be non-empty, non-whitespace, and <= 200 chars
+    if (!selection || !selectedText || selectedText.length > 200) {
+      removeElements();
+      return;
+    }
+
+    // Check if selection collapsed
+    if (selection.isCollapsed) {
+      removeElements();
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    // Create floating trigger icon
     removeElements();
-    return;
-  }
 
-  // Check if selection collapsed
-  if (selection.isCollapsed) {
-    removeElements();
-    return;
-  }
+    triggerBtn = document.createElement('div');
+    triggerBtn.id = 'linguaflow-trigger-btn';
+    triggerBtn.innerText = 'LF';
+    triggerBtn.title = 'Explain & Save with LinguaFlow';
 
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
+    const top = rect.bottom + window.scrollY + 6;
+    const left = Math.min(window.innerWidth - 40, rect.left + window.scrollX);
 
-  // Create floating trigger icon
-  removeElements();
+    triggerBtn.style.top = `${top}px`;
+    triggerBtn.style.left = `${left}px`;
 
-  triggerBtn = document.createElement('div');
-  triggerBtn.id = 'linguaflow-trigger-btn';
-  triggerBtn.innerText = 'LF';
-  triggerBtn.title = 'Explain & Save with LinguaFlow';
+    triggerBtn.addEventListener('mousedown', (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
 
-  const top = rect.bottom + window.scrollY + 6;
-  const left = Math.min(window.innerWidth - 40, rect.left + window.scrollX);
+      const sentence = extractContext(selection, selectedText);
+      const sourceUrl = window.location.href;
+      const sourceTitle = document.title || null;
 
-  triggerBtn.style.top = `${top}px`;
-  triggerBtn.style.left = `${left}px`;
+      showExplanationPopup(rect, selectedText, sentence, sourceUrl, sourceTitle);
+    });
 
-  triggerBtn.addEventListener('mousedown', (evt) => {
-    evt.preventDefault();
-    evt.stopPropagation();
-
-    const sentence = extractContext(selection, selectedText);
-    const sourceUrl = window.location.href;
-    const sourceTitle = document.title || null;
-
-    showExplanationPopup(rect, selectedText, sentence, sourceUrl, sourceTitle);
+    document.body.appendChild(triggerBtn);
   });
 
-  document.body.appendChild(triggerBtn);
-});
+  // Click outside closes the popup
+  document.addEventListener('mousedown', (e: MouseEvent) => {
+    if (popupCard && !popupCard.contains(e.target as Node) && e.target !== triggerBtn) {
+      removeElements();
+    }
+  });
+}
 
-// Click outside closes the popup
-document.addEventListener('mousedown', (e: MouseEvent) => {
-  if (popupCard && !popupCard.contains(e.target as Node) && e.target !== triggerBtn) {
-    removeElements();
-  }
-});
-
-function showExplanationPopup(
+export function showExplanationPopup(
   rect: DOMRect,
   selectedText: string,
   sentence: string,
   sourceUrl: string,
   sourceTitle: string | null,
+  mediaMetadata?: MediaMetadataPayload | null,
 ) {
   if (triggerBtn) {
     triggerBtn.remove();
@@ -254,6 +304,7 @@ function showExplanationPopup(
               sourceUrl,
               sourceTitle,
               selectedText,
+              mediaMetadata: mediaMetadata || null,
             },
           },
           (saveRes) => {
@@ -281,4 +332,273 @@ function showExplanationPopup(
       popupCard.appendChild(footer);
     },
   );
+}
+
+/* ========================================================
+   Phase 2: YouTube Subtitle Overlay & Video Interaction
+   ======================================================== */
+
+let ytCurrentVideoId: string | null = null;
+let ytSegments: SubtitleSegment[] = [];
+let ytActiveSegment: SubtitleSegment | null = null;
+let ytSubtitlesContainer: HTMLElement | null = null;
+
+export function isYouTubeWatchPage(href?: string): boolean {
+  if (href) {
+    try {
+      const url = new URL(href);
+      return url.hostname.includes('youtube.com') && url.pathname.startsWith('/watch');
+    } catch {
+      return false;
+    }
+  }
+  if (typeof window === 'undefined' || !window.location) return false;
+  return (
+    window.location.hostname.includes('youtube.com') &&
+    window.location.pathname.startsWith('/watch')
+  );
+}
+
+export function getYouTubeVideoId(href?: string): string | null {
+  if (href) {
+    if (!isYouTubeWatchPage(href)) return null;
+    try {
+      const url = new URL(href);
+      return url.searchParams.get('v');
+    } catch {
+      return null;
+    }
+  }
+  if (!isYouTubeWatchPage()) return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('v');
+}
+
+function getYouTubeVideoElement(): HTMLVideoElement | null {
+  return document.querySelector('video.html5-main-video') || document.querySelector('video');
+}
+
+function ensureSubtitleContainer(): HTMLElement | null {
+  let container = document.getElementById('linguaflow-yt-subtitles');
+  if (container) return container;
+
+  const player =
+    document.getElementById('movie_player') ||
+    document.querySelector('.html5-video-player') ||
+    document.body;
+
+  container = document.createElement('div');
+  container.id = 'linguaflow-yt-subtitles';
+
+  const primaryLine = document.createElement('div');
+  primaryLine.className = 'lf-yt-sub-line lf-primary';
+  container.appendChild(primaryLine);
+
+  const secondaryLine = document.createElement('div');
+  secondaryLine.className = 'lf-yt-sub-line lf-secondary';
+  secondaryLine.style.display = 'none';
+  container.appendChild(secondaryLine);
+
+  const hotkeysHint = document.createElement('div');
+  hotkeysHint.className = 'lf-yt-hotkeys-hint';
+  hotkeysHint.innerHTML = `
+    <span><span class="lf-yt-hotkey">[A]</span> -3s</span>
+    <span><span class="lf-yt-hotkey">[S]</span> Repeat</span>
+    <span><span class="lf-yt-hotkey">[D]</span> +3s</span>
+    <span><span class="lf-yt-hotkey">[Space]</span> Pause</span>
+  `;
+  container.appendChild(hotkeysHint);
+
+  player.appendChild(container);
+  ytSubtitlesContainer = container;
+  return container;
+}
+
+export function renderSubtitleCue(segment: SubtitleSegment | null) {
+  const container = ensureSubtitleContainer();
+  if (!container) return;
+
+  const primaryLine = container.querySelector('.lf-yt-sub-line.lf-primary') as HTMLElement;
+  const secondaryLine = container.querySelector('.lf-yt-sub-line.lf-secondary') as HTMLElement;
+
+  if (!segment || !segment.text?.trim()) {
+    container.style.display = 'none';
+    if (primaryLine) primaryLine.replaceChildren();
+    if (secondaryLine) {
+      secondaryLine.replaceChildren();
+      secondaryLine.style.display = 'none';
+    }
+    return;
+  }
+
+  container.style.display = 'flex';
+  primaryLine.replaceChildren();
+
+  const tokens = tokenizeSubtitleSentence(segment.text);
+  const video = getYouTubeVideoElement();
+
+  tokens.forEach((token) => {
+    if (token.isWord) {
+      const span = document.createElement('span');
+      span.className = 'lf-yt-word';
+      span.textContent = token.text;
+
+      span.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (video) {
+          video.pause();
+        }
+
+        const rect = span.getBoundingClientRect();
+        const videoId = getYouTubeVideoId();
+        const videoTitle = document.title.replace(' - YouTube', '').trim();
+        const timestampSeconds = video ? Math.floor(video.currentTime) : null;
+
+        showExplanationPopup(
+          rect,
+          token.text,
+          segment.text,
+          window.location.href,
+          videoTitle,
+          {
+            provider: 'youtube',
+            videoId,
+            timestampSeconds,
+            videoTitle,
+          },
+        );
+      });
+
+      primaryLine.appendChild(span);
+    } else {
+      primaryLine.appendChild(document.createTextNode(token.text));
+    }
+  });
+
+  if (secondaryLine) {
+    if (segment.translation) {
+      secondaryLine.textContent = segment.translation;
+      secondaryLine.style.display = 'block';
+    } else {
+      secondaryLine.replaceChildren();
+      secondaryLine.style.display = 'none';
+    }
+  }
+}
+
+function fetchTranscriptForCurrentVideo() {
+  const videoId = getYouTubeVideoId();
+  if (!videoId || videoId === ytCurrentVideoId) return;
+
+  ytCurrentVideoId = videoId;
+  ytSegments = [];
+  ytActiveSegment = null;
+
+  chrome.runtime.sendMessage(
+    {
+      action: 'FETCH_VIDEO_TRANSCRIPT',
+      payload: {
+        videoUrl: window.location.href,
+        language: 'en',
+      },
+    },
+    (res) => {
+      if (res && res.success && Array.isArray(res.data?.segments)) {
+        ytSegments = res.data.segments;
+      }
+    },
+  );
+}
+
+function setupYouTubeVideoListeners() {
+  const video = getYouTubeVideoElement();
+  if (!video) return;
+
+  video.removeEventListener('timeupdate', onTimeUpdate);
+  video.addEventListener('timeupdate', onTimeUpdate);
+}
+
+function onTimeUpdate() {
+  const video = getYouTubeVideoElement();
+  if (!video || ytSegments.length === 0) return;
+
+  const currentTime = video.currentTime;
+  const currentSegment = ytSegments.find(
+    (s) => s.startSeconds <= currentTime && currentTime <= s.endSeconds,
+  );
+
+  if (currentSegment !== ytActiveSegment) {
+    ytActiveSegment = currentSegment || null;
+    renderSubtitleCue(ytActiveSegment);
+  }
+}
+
+// Hotkey shortcuts (FR-VIDEO-002)
+if (typeof document !== 'undefined') {
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable)
+    ) {
+      return;
+    }
+
+    if (!isYouTubeWatchPage()) return;
+    const video = getYouTubeVideoElement();
+    if (!video) return;
+
+    const key = e.key.toLowerCase();
+
+    if (key === 'a') {
+      // Rewind 3 seconds
+      e.preventDefault();
+      video.currentTime = Math.max(0, video.currentTime - 3);
+    } else if (key === 'd') {
+      // Forward 3 seconds
+      e.preventDefault();
+      video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 3);
+    } else if (key === 's') {
+      // Replay current sentence / cue
+      e.preventDefault();
+      if (ytActiveSegment) {
+        video.currentTime = ytActiveSegment.startSeconds;
+      } else {
+        video.currentTime = Math.max(0, video.currentTime - 3);
+      }
+      if (video.paused) {
+        video.play().catch(() => {});
+      }
+    } else if (e.key === ' ' && target === document.body) {
+      // Space play/pause toggle when not focused on an interactive element
+      e.preventDefault();
+      if (video.paused) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    }
+  });
+}
+
+// Periodic check for YouTube SPA navigation
+if (typeof window !== 'undefined') {
+  window.addEventListener('yt-navigate-finish', () => {
+    fetchTranscriptForCurrentVideo();
+    setupYouTubeVideoListeners();
+  });
+
+  setInterval(() => {
+    if (isYouTubeWatchPage()) {
+      const videoId = getYouTubeVideoId();
+      if (videoId && videoId !== ytCurrentVideoId) {
+        fetchTranscriptForCurrentVideo();
+        setupYouTubeVideoListeners();
+      }
+    }
+  }, 1000);
 }

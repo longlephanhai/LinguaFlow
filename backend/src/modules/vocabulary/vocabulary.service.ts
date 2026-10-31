@@ -89,6 +89,15 @@ export class VocabularyService {
       sourceUrl: dto.sourceUrl.trim(),
       sourceTitle: dto.sourceTitle?.trim() || null,
       capturedAt: new Date(),
+      mediaMetadata: dto.mediaMetadata
+        ? {
+            provider: dto.mediaMetadata.provider || null,
+            videoId: dto.mediaMetadata.videoId || null,
+            timestampSeconds: dto.mediaMetadata.timestampSeconds ?? null,
+            videoTitle: dto.mediaMetadata.videoTitle?.trim() || null,
+            audioSnippetUrl: dto.mediaMetadata.audioSnippetUrl?.trim() || null,
+          }
+        : null,
       review: {
         easeFactor: 2.5,
         intervalDays: 1,
@@ -202,6 +211,7 @@ export class VocabularyService {
           example: meaning?.example || '',
           capturedAt: occ.capturedAt,
           review: occ.review,
+          mediaMetadata: occ.mediaMetadata || null,
         };
       }),
     };

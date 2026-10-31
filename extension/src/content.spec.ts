@@ -1,28 +1,15 @@
-import { describe, it, expect } from 'vitest';
-
-function extractContextFromText(parentText: string, selectedText: string): string {
-  if (!parentText) return selectedText;
-
-  const sentences = parentText.split(/(?<=[.!?])\s+/);
-  const matchedSentence = sentences.find((s) => s.includes(selectedText));
-
-  if (matchedSentence && matchedSentence.length <= 400) {
-    return matchedSentence.trim();
-  }
-
-  const idx = parentText.indexOf(selectedText);
-  if (idx !== -1) {
-    const start = Math.max(0, idx - 100);
-    const end = Math.min(parentText.length, idx + selectedText.length + 100);
-    return parentText.substring(start, end).trim();
-  }
-
-  return selectedText;
-}
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  extractContextFromText,
+  tokenizeSubtitleSentence,
+  isYouTubeWatchPage,
+  getYouTubeVideoId,
+} from './content.js';
 
 describe('Extension Content Script - Context Extraction', () => {
   it('extracts the exact parent sentence containing the selected word', () => {
-    const paragraph = 'The quick brown fox jumps over the lazy dog. The beauty of a sunset is ephemeral, lasting only a few minutes. Tomorrow will be sunny.';
+    const paragraph =
+      'The quick brown fox jumps over the lazy dog. The beauty of a sunset is ephemeral, lasting only a few minutes. Tomorrow will be sunny.';
     const selected = 'ephemeral';
 
     const result = extractContextFromText(paragraph, selected);
@@ -41,5 +28,60 @@ describe('Extension Content Script - Context Extraction', () => {
     const longSelection = 'a'.repeat(201);
     const isValid = longSelection.length <= 200;
     expect(isValid).toBe(false);
+  });
+});
+
+describe('Extension Content Script - YouTube Subtitle Tokenizer', () => {
+  it('tokenizes sentence into words and non-words', () => {
+    const sentence = 'Hello, world! We are learning.';
+    const tokens = tokenizeSubtitleSentence(sentence);
+
+    const words = tokens.filter((t) => t.isWord).map((t) => t.text);
+    expect(words).toEqual(['Hello', 'world', 'We', 'are', 'learning']);
+  });
+
+  it('preserves contractions and hyphens within words', () => {
+    const sentence = "It's a high-impact feature, don't miss it!";
+    const tokens = tokenizeSubtitleSentence(sentence);
+
+    const words = tokens.filter((t) => t.isWord).map((t) => t.text);
+    expect(words).toContain("It's");
+    expect(words).toContain("high-impact");
+    expect(words).toContain("don't");
+  });
+
+  it('returns empty array for empty string', () => {
+    expect(tokenizeSubtitleSentence('')).toEqual([]);
+  });
+});
+
+describe('Extension Content Script - YouTube URL Detection', () => {
+  it('detects youtube watch page and extracts videoId with parameter', () => {
+    const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s';
+    expect(isYouTubeWatchPage(url)).toBe(true);
+    expect(getYouTubeVideoId(url)).toBe('dQw4w9WgXcQ');
+  });
+
+  it('returns false and null for non-watch youtube pages or other websites', () => {
+    expect(isYouTubeWatchPage('https://www.youtube.com/feed/subscriptions')).toBe(false);
+    expect(getYouTubeVideoId('https://www.youtube.com/feed/subscriptions')).toBeNull();
+
+    expect(isYouTubeWatchPage('https://medium.com/watch?v=123')).toBe(false);
+    expect(getYouTubeVideoId('https://medium.com/watch?v=123')).toBeNull();
+  });
+
+  it('works with global window mock when defined', () => {
+    (globalThis as any).window = {
+      location: {
+        hostname: 'www.youtube.com',
+        pathname: '/watch',
+        search: '?v=dQw4w9WgXcQ',
+      },
+    };
+
+    expect(isYouTubeWatchPage()).toBe(true);
+    expect(getYouTubeVideoId()).toBe('dQw4w9WgXcQ');
+
+    delete (globalThis as any).window;
   });
 });

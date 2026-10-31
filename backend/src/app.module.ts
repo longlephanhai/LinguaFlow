@@ -14,6 +14,7 @@ import { QuizModule } from './modules/quiz/quiz.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { ChatModule } from './modules/chat/chat.module.js';
 import { WritingModule } from './modules/writing/writing.module.js';
+import { VideoModule } from './modules/video/video.module.js';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { WritingModule } from './modules/writing/writing.module.js';
     DashboardModule,
     ChatModule,
     WritingModule,
+    VideoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
