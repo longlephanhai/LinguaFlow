@@ -68,4 +68,12 @@ export class AiService {
   async generateQuiz(items: import('./ai-provider.interface.js').QuizItemInput[], count: number) {
     return this.aiProvider.generateQuiz(items, count);
   }
+
+  async chat(
+    history: import('./ai-provider.interface.js').ChatMessageItem[],
+    message: string,
+    userVocabulary?: string[],
+  ): Promise<string> {
+    return this.aiProvider.chat(history, message, userVocabulary);
+  }
 }

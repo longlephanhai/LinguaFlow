@@ -286,4 +286,15 @@ export class VocabularyService {
 
     return { success: true };
   }
+
+  async getRecentLemmas(userId: string, limit = 20): Promise<string[]> {
+    const userObjectId = new Types.ObjectId(userId);
+    const items = await this.vocabularyItemModel
+      .find({ userId: userObjectId, isDeleted: false })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('lemma')
+      .lean();
+    return items.map((i) => i.lemma);
+  }
 }

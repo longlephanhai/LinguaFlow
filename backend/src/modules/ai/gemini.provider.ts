@@ -6,6 +6,7 @@ import {
   ExplainInContextResult,
   QuizItemInput,
   GeneratedQuestion,
+  ChatMessageItem,
 } from './ai-provider.interface.js';
 
 @Injectable()
@@ -241,6 +242,97 @@ Respond ONLY with a valid JSON array of objects with this exact structure (no ma
         error: {
           code: 'AI_PROVIDER_ERROR',
           message: lastError?.message || 'AI quiz generation failed',
+        },
+      },
+      HttpStatus.BAD_GATEWAY,
+    );
+  }
+
+  async chat(history: ChatMessageItem[], message: string, userVocabulary?: string[]): Promise<string> {
+    const client = this.client || this.initClient();
+    if (!client) {
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'AI_PROVIDER_ERROR',
+            message: 'Gemini API key is not configured in backend/.env.',
+          },
+        },
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+
+    const vocabContext = userVocabulary && userVocabulary.length > 0
+      ? `The user is practicing these English vocabulary words: [${userVocabulary.join(', ')}]. Whenever natural and appropriate, gently weave some of these words into your answers or prompt the user to try using them.`
+      : '';
+
+    const systemInstruction = `You are a friendly, encouraging English tutor and conversation partner in the LinguaFlow language app.
+Your goals:
+1. Converse naturally, engagingly, and helpfully in English with the learner.
+2. If the user makes grammatical, spelling, or unnatural phrasing mistakes in their message, provide a gentle, brief inline correction (e.g., "*Tip: Consider saying '...' instead of '...' for natural phrasing*") and then reply conversationally.
+3. Keep responses conversational, concise, and end with an engaging follow-up thought or question when appropriate.
+${vocabContext}`;
+
+    // Limit conversation history to the last 15 messages for optimal prompt size and context
+    const recentHistory = (history || []).slice(-15);
+    const formattedHistory = recentHistory
+      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n\n');
+
+    const prompt = `${systemInstruction}
+
+Conversation History:
+${formattedHistory ? formattedHistory + '\n\n' : ''}User: ${message}
+Assistant:`;
+
+    const candidateModels = Array.from(
+      new Set([
+        this.primaryModel,
+        'gemini-flash-lite-latest',
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-flash-latest',
+        'gemini-3.8-flash',
+      ]),
+    );
+
+    let lastError: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        const callPromise = client.models.generateContent({
+          model,
+          contents: prompt,
+        });
+
+        // 8s per-model timeout for chat response
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Model ${model} request timeout after 8s`)), 8000),
+        );
+
+        const response = await Promise.race([callPromise, timeoutPromise]);
+        let reply = response.text?.trim() || '';
+
+        // EDGE-012: Truncate response if > 5000 chars
+        if (reply.length > 5000) {
+          reply = reply.slice(0, 5000) + '... (response truncated)';
+        }
+
+        return reply;
+      } catch (err: any) {
+        lastError = err;
+        this.logger.warn(`Model ${model} failed for chat: ${err.message}. Trying next candidate...`);
+      }
+    }
+
+    this.logger.error(`All candidate Gemini models failed for chat. Last error: ${lastError?.message}`);
+    throw new HttpException(
+      {
+        success: false,
+        error: {
+          code: 'AI_PROVIDER_ERROR',
+          message: lastError?.message || 'AI chat response failed',
         },
       },
       HttpStatus.BAD_GATEWAY,

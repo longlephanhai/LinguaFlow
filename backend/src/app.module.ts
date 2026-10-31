@@ -12,6 +12,7 @@ import { ReviewModule } from './modules/review/review.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
 import { QuizModule } from './modules/quiz/quiz.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
+import { ChatModule } from './modules/chat/chat.module.js';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
     AiModule,
     QuizModule,
     DashboardModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

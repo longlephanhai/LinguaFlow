@@ -21,9 +21,15 @@ export interface GeneratedQuestion {
   explanation: string;
 }
 
+export interface ChatMessageItem {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface AIProvider {
   explainInContext(selectedText: string, contextText: string): Promise<ExplainInContextResult>;
   generateQuiz(items: QuizItemInput[], count: number): Promise<GeneratedQuestion[]>;
+  chat(history: ChatMessageItem[], message: string, userVocabulary?: string[]): Promise<string>;
 }
 
 export const AI_PROVIDER_TOKEN = Symbol('AI_PROVIDER_TOKEN');

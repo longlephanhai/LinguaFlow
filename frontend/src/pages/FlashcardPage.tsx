@@ -23,7 +23,6 @@ import {
   IconCheck,
   IconEye,
   IconExternalLink,
-  IconSparkles,
   IconRefresh,
   IconPlayerPause,
 } from '@tabler/icons-react';

@@ -103,6 +103,19 @@ Response: `{ "items": [{ "quizId": "...", "score": 7, "total": 10, "scope": "all
 Request: `{ "sessionId"?: "...", "message": "How do I use 'scale' in a sentence?" }`
 Response: `{ "sessionId": "...", "reply": "..." }`
 
+**`GET /chat/sessions`**
+Query: `?page=1&limit=10`
+Response: `{ "items": [{ "id": "...", "title": "How do I use 'scale'...", "updatedAt": "...", "messageCount": 4 }], "total": 1, "page": 1, "limit": 10, "totalPages": 1 }`
+
+**`GET /chat/sessions/:id`**
+Response: `{ "id": "...", "title": "How do I use 'scale'...", "messages": [{ "role": "user", "content": "...", "createdAt": "..." }, { "role": "assistant", "content": "...", "createdAt": "..." }], "createdAt": "...", "updatedAt": "..." }`
+
+**`DELETE /chat/sessions/:id`**
+Response: `{ "success": true }`
+
+**`GET /chat/suggested-words`**
+Response: `{ "words": ["scale", "ubiquitous", "resilient", "pragmatic", "leverage"] }`
+
 ## Writing Review
 
 **`POST /writing/review`**

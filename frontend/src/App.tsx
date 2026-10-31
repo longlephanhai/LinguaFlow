@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { VocabularyPage } from './pages/VocabularyPage';
 import { FlashcardPage } from './pages/FlashcardPage';
 import { QuizPage } from './pages/QuizPage';
+import { ChatPage } from './pages/ChatPage';
 import { AppLayout } from './components/layout/AppLayout';
 import './App.css';
 
@@ -27,6 +28,7 @@ function App() {
               <Route path="/flashcards" element={<FlashcardPage />} />
               <Route path="/review" element={<Navigate to="/flashcards" replace />} />
               <Route path="/quiz" element={<QuizPage />} />
+              <Route path="/chat" element={<ChatPage />} />
               {/* Add future protected routes here */}
             </Route>
           </Route>
