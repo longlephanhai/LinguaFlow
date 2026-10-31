@@ -13,6 +13,7 @@ import { AiModule } from './modules/ai/ai.module.js';
 import { QuizModule } from './modules/quiz/quiz.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { ChatModule } from './modules/chat/chat.module.js';
+import { WritingModule } from './modules/writing/writing.module.js';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ChatModule } from './modules/chat/chat.module.js';
     QuizModule,
     DashboardModule,
     ChatModule,
+    WritingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -76,4 +76,9 @@ export class AiService {
   ): Promise<string> {
     return this.aiProvider.chat(history, message, userVocabulary);
   }
+
+  async reviewWriting(text: string) {
+    return this.aiProvider.reviewWriting(text);
+  }
 }
+

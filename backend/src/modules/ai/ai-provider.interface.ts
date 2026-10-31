@@ -26,10 +26,18 @@ export interface ChatMessageItem {
   content: string;
 }
 
+export interface WritingReviewResult {
+  feedback: string;
+  suggestions: string[];
+  aiModel?: string;
+}
+
 export interface AIProvider {
   explainInContext(selectedText: string, contextText: string): Promise<ExplainInContextResult>;
   generateQuiz(items: QuizItemInput[], count: number): Promise<GeneratedQuestion[]>;
   chat(history: ChatMessageItem[], message: string, userVocabulary?: string[]): Promise<string>;
+  reviewWriting(text: string): Promise<WritingReviewResult>;
 }
 
 export const AI_PROVIDER_TOKEN = Symbol('AI_PROVIDER_TOKEN');
+

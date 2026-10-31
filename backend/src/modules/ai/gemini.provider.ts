@@ -7,6 +7,7 @@ import {
   QuizItemInput,
   GeneratedQuestion,
   ChatMessageItem,
+  WritingReviewResult,
 } from './ai-provider.interface.js';
 
 @Injectable()
@@ -338,4 +339,114 @@ Assistant:`;
       HttpStatus.BAD_GATEWAY,
     );
   }
+
+  async reviewWriting(text: string): Promise<WritingReviewResult> {
+    const client = this.client || this.initClient();
+    if (!client) {
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'AI_PROVIDER_ERROR',
+            message: 'Gemini API key is not configured in backend/.env.',
+          },
+        },
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+
+    const prompt = `You are an expert English writing tutor and editor in LinguaFlow.
+Analyze the following English text written by a language learner:
+
+"""
+${text}
+"""
+
+Evaluate the writing on grammar, syntax, vocabulary choice, clarity, and overall flow.
+Provide constructive, motivating, and specific feedback.
+
+Respond ONLY with a valid JSON object matching this exact schema:
+{
+  "feedback": "A clear, cohesive prose commentary summarizing the overall strengths, tone, and main areas for improvement (2 to 4 sentences).",
+  "suggestions": [
+    "Specific actionable point identifying a mistake or awkward phrasing, explaining why, and offering a revised example sentence."
+  ]
+}`;
+
+    const candidateModels = Array.from(
+      new Set([
+        this.primaryModel,
+        'gemini-flash-lite-latest',
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-flash-latest',
+        'gemini-3.8-flash',
+      ]),
+    );
+
+    let lastError: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        const callPromise = client.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+
+        // 10s per-model timeout for writing review
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Model ${model} request timeout after 10s`)), 10000),
+        );
+
+        const response = await Promise.race([callPromise, timeoutPromise]);
+        let raw = response.text?.trim() || '{}';
+        if (raw.startsWith('```json')) raw = raw.slice(7);
+        if (raw.startsWith('```')) raw = raw.slice(3);
+        if (raw.endsWith('```')) raw = raw.slice(0, -3);
+
+        const parsed = JSON.parse(raw.trim());
+
+        let feedback = String(parsed.feedback || 'Your writing has been reviewed. Keep practicing!');
+        // EDGE-012: Truncate response if > 5000 chars
+        if (feedback.length > 5000) {
+          feedback = feedback.slice(0, 5000) + '... (response truncated)';
+        }
+
+        const rawSuggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+        const suggestions: string[] = rawSuggestions
+          .map((s: any) => String(s).trim())
+          .filter((s: string) => s.length > 0)
+          .slice(0, 10);
+
+        if (suggestions.length === 0) {
+          suggestions.push('No critical grammatical errors found. Great work!');
+        }
+
+        return {
+          feedback,
+          suggestions,
+          aiModel: model,
+        };
+      } catch (err: any) {
+        lastError = err;
+        this.logger.warn(`Model ${model} failed for writing review: ${err.message}. Trying next candidate...`);
+      }
+    }
+
+    this.logger.error(`All candidate Gemini models failed for writing review. Last error: ${lastError?.message}`);
+    throw new HttpException(
+      {
+        success: false,
+        error: {
+          code: 'AI_PROVIDER_ERROR',
+          message: lastError?.message || 'AI writing review failed',
+        },
+      },
+      HttpStatus.BAD_GATEWAY,
+    );
+  }
 }
+

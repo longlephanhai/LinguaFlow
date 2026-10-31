@@ -119,8 +119,78 @@ Response: `{ "words": ["scale", "ubiquitous", "resilient", "pragmatic", "leverag
 ## Writing Review
 
 **`POST /writing/review`**
-Request: `{ "text": "I have went to school yesterday." }`
-Response: `{ "feedback": "...", "suggestions": ["Use 'went' without 'have' for simple past: 'I went to school yesterday.'"] }`
+Request:
+```json
+{
+  "text": "I have went to school yesterday because the weather was very sunny."
+}
+```
+Response:
+```json
+{
+  "_id": "672370000000000000000001",
+  "originalText": "I have went to school yesterday because the weather was very sunny.",
+  "wordCount": 11,
+  "feedback": "Overall, the sentence clearly conveys your action and reasoning. However, there is a common verb tense error in the main clause.",
+  "suggestions": [
+    "Use 'went' without 'have' for past events completed yesterday: 'I went to school yesterday because the weather was very sunny.'"
+  ],
+  "aiModel": "gemini-flash-lite-latest",
+  "createdAt": "2026-10-31T16:00:00.000Z"
+}
+```
+
+**`GET /writing/history?page=1&limit=10`**
+Response:
+```json
+{
+  "items": [
+    {
+      "_id": "672370000000000000000001",
+      "originalText": "I have went to school yesterday because the weather was very sunny.",
+      "wordCount": 11,
+      "suggestionsCount": 1,
+      "createdAt": "2026-10-31T16:00:00.000Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 1
+}
+```
+
+**`GET /writing/history/:id`**
+Response:
+```json
+{
+  "_id": "672370000000000000000001",
+  "originalText": "I have went to school yesterday because the weather was very sunny.",
+  "wordCount": 11,
+  "feedback": "Overall, the sentence clearly conveys your action and reasoning...",
+  "suggestions": [
+    "Use 'went' without 'have' for past events completed yesterday: 'I went to school yesterday because the weather was very sunny.'"
+  ],
+  "aiModel": "gemini-flash-lite-latest",
+  "createdAt": "2026-10-31T16:00:00.000Z"
+}
+```
+
+**`DELETE /writing/history/:id`**
+Response:
+```json
+{
+  "success": true
+}
+```
+
+**`GET /writing/suggested-words`**
+Response:
+```json
+{
+  "words": ["resilient", "ubiquitous", "scale", "leverage", "pragmatic"]
+}
+```
 
 ## Dashboard
 
