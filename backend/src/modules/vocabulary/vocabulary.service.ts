@@ -258,7 +258,7 @@ export class VocabularyService {
     const occ = await this.occurrenceModel.findOneAndUpdate(
       { _id: occObjectId, userId: userObjectId, isDeleted: false },
       { isDeleted: true, deletedAt: new Date() },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     if (!occ) {

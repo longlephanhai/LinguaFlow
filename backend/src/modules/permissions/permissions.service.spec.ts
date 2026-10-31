@@ -140,7 +140,7 @@ describe('PermissionsService', () => {
         expect.objectContaining({
           $set: expect.objectContaining({ isDeleted: true }),
         }),
-        { new: true },
+        { returnDocument: 'after' },
       );
       expect(result).toEqual({ success: true });
     });

@@ -185,7 +185,7 @@ export class ChatService {
           deletedAt: new Date(),
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     if (!session) {

@@ -115,7 +115,7 @@ export class RolesService {
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
         { $set: updatePayload },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .populate({
         path: 'permissions',
@@ -135,7 +135,7 @@ export class RolesService {
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
         { $set: { isDeleted: true, deletedAt: new Date() } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
 

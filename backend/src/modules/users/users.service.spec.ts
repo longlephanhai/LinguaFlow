@@ -112,7 +112,7 @@ describe('UsersService', () => {
       expect(mockUserModel.findOneAndUpdate).toHaveBeenCalledWith(
         { _id: '123', isDeleted: false },
         { $set: { displayName: 'Updated Name' } },
-        { new: true },
+        { returnDocument: 'after' },
       );
       expect(result).toEqual(updatedUser);
     });

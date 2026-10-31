@@ -68,7 +68,7 @@ export class PermissionsService {
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
         { $set: updatePermissionDto },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
 
@@ -84,7 +84,7 @@ export class PermissionsService {
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
         { $set: { isDeleted: true, deletedAt: new Date() } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
 

@@ -44,7 +44,7 @@ export class UsersService {
     const updatedUser = await this.userModel.findOneAndUpdate(
       { _id: id, isDeleted: false },
       { $set: updateData },
-      { new: true }
+      { returnDocument: 'after' }
     ).exec();
     
     if (!updatedUser) {

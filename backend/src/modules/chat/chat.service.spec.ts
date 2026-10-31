@@ -196,7 +196,7 @@ describe('ChatService', () => {
         expect.objectContaining({
           $set: expect.objectContaining({ isDeleted: true }),
         }),
-        { new: true },
+        { returnDocument: 'after' },
       );
     });
 
