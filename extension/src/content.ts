@@ -414,14 +414,14 @@ function ensureSubtitleContainer(): HTMLElement | null {
   return container;
 }
 
-export function renderSubtitleCue(segment: SubtitleSegment | null) {
+export function renderSubtitleText(text: string, translation: string | null = null) {
   const container = ensureSubtitleContainer();
   if (!container) return;
 
   const primaryLine = container.querySelector('.lf-yt-sub-line.lf-primary') as HTMLElement;
   const secondaryLine = container.querySelector('.lf-yt-sub-line.lf-secondary') as HTMLElement;
 
-  if (!segment || !segment.text?.trim()) {
+  if (!text || !text.trim()) {
     container.style.display = 'none';
     if (primaryLine) primaryLine.replaceChildren();
     if (secondaryLine) {
@@ -434,7 +434,7 @@ export function renderSubtitleCue(segment: SubtitleSegment | null) {
   container.style.display = 'flex';
   primaryLine.replaceChildren();
 
-  const tokens = tokenizeSubtitleSentence(segment.text);
+  const tokens = tokenizeSubtitleSentence(text);
   const video = getYouTubeVideoElement();
 
   tokens.forEach((token) => {
@@ -459,7 +459,7 @@ export function renderSubtitleCue(segment: SubtitleSegment | null) {
         showExplanationPopup(
           rect,
           token.text,
-          segment.text,
+          text,
           window.location.href,
           videoTitle,
           {
@@ -478,13 +478,158 @@ export function renderSubtitleCue(segment: SubtitleSegment | null) {
   });
 
   if (secondaryLine) {
-    if (segment.translation) {
-      secondaryLine.textContent = segment.translation;
+    if (translation) {
+      secondaryLine.textContent = translation;
       secondaryLine.style.display = 'block';
     } else {
       secondaryLine.replaceChildren();
       secondaryLine.style.display = 'none';
     }
+  }
+}
+
+export function renderSubtitleCue(segment: SubtitleSegment | null) {
+  if (!segment) {
+    renderSubtitleText('');
+  } else {
+    renderSubtitleText(segment.text, segment.translation);
+  }
+}
+
+let captionObserver: MutationObserver | null = null;
+let lastObservedCaptionText: string = '';
+
+function setupNativeCaptionObserver() {
+  if (captionObserver) {
+    captionObserver.disconnect();
+  }
+
+  const player =
+    document.getElementById('movie_player') ||
+    document.querySelector('.html5-video-player') ||
+    document.body;
+
+  captionObserver = new MutationObserver(() => {
+    // If backend segments are actively controlling cues, let them drive
+    if (ytSegments.length > 0 && ytActiveSegment) return;
+
+    const segments = document.querySelectorAll('.ytp-caption-segment');
+    if (segments.length > 0) {
+      const fullText = Array.from(segments)
+        .map((s) => s.textContent || '')
+        .join(' ')
+        .trim();
+
+      if (fullText && fullText !== lastObservedCaptionText) {
+        lastObservedCaptionText = fullText;
+        renderSubtitleText(fullText);
+      }
+    } else if (lastObservedCaptionText) {
+      lastObservedCaptionText = '';
+      renderSubtitleText('');
+    }
+  });
+
+  captionObserver.observe(player, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+}
+
+function checkYouTubeSubtitlesButton() {
+  if (!isYouTubeWatchPage()) return;
+
+  const ccBtn = document.querySelector<HTMLButtonElement>('.ytp-subtitles-button');
+  if (!ccBtn) return;
+
+  const isPressed = ccBtn.getAttribute('aria-pressed') === 'true';
+  const banner = document.getElementById('lf-yt-cc-prompt');
+
+  if (!isPressed) {
+    if (!banner) {
+      const prompt = document.createElement('div');
+      prompt.id = 'lf-yt-cc-prompt';
+      prompt.innerHTML = `
+        <span class="lf-yt-cc-icon">💬</span>
+        <span>LinguaFlow: Bật CC để hiện phụ đề tra từ</span>
+        <button class="lf-yt-cc-btn">Bật phụ đề</button>
+      `;
+      prompt.querySelector('.lf-yt-cc-btn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ccBtn.click();
+        prompt.remove();
+      });
+
+      const player =
+        document.getElementById('movie_player') ||
+        document.querySelector('.html5-video-player') ||
+        document.body;
+      player.appendChild(prompt);
+    }
+  } else {
+    if (banner) {
+      banner.remove();
+    }
+  }
+}
+
+function tryExtractBrowserCaptionTracks() {
+  try {
+    for (const script of Array.from(document.scripts)) {
+      const content = script.textContent || '';
+      if (content.includes('captionTracks')) {
+        const match = content.match(/"captionTracks":\s*(\[.+?\])/);
+        if (match) {
+          const tracks = JSON.parse(match[1]);
+          if (Array.isArray(tracks) && tracks.length > 0) {
+            const track =
+              tracks.find((t: any) => t.languageCode === 'en' || t.languageCode?.startsWith('en')) ||
+              tracks[0];
+            if (track && track.baseUrl) {
+              const url = track.baseUrl.includes('fmt=json3')
+                ? track.baseUrl
+                : `${track.baseUrl}&fmt=json3`;
+              fetch(url)
+                .then((r) => r.json())
+                .then((json3) => {
+                  if (json3.events && Array.isArray(json3.events)) {
+                    let segIndex = 0;
+                    const segments: SubtitleSegment[] = [];
+                    for (const ev of json3.events) {
+                      if (!ev.segs || !Array.isArray(ev.segs)) continue;
+                      const text = ev.segs
+                        .map((s: any) => s.utf8 || '')
+                        .join('')
+                        .replace(/\n+/g, ' ')
+                        .trim();
+                      if (!text || text === '\n') continue;
+                      const startSeconds = Number((ev.tStartMs / 1000).toFixed(2));
+                      const dur = (ev.dDurationMs || 0) / 1000;
+                      const endSeconds = Number((startSeconds + dur).toFixed(2));
+                      segments.push({
+                        index: segIndex++,
+                        startSeconds,
+                        endSeconds,
+                        text,
+                        translation: null,
+                      });
+                    }
+                    if (segments.length > 0) {
+                      ytSegments = segments;
+                    }
+                  }
+                })
+                .catch(() => {});
+              return;
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignore extraction failure and rely on native caption observer
   }
 }
 
@@ -496,6 +641,8 @@ function fetchTranscriptForCurrentVideo() {
   ytSegments = [];
   ytActiveSegment = null;
 
+  tryExtractBrowserCaptionTracks();
+
   chrome.runtime.sendMessage(
     {
       action: 'FETCH_VIDEO_TRANSCRIPT',
@@ -505,7 +652,7 @@ function fetchTranscriptForCurrentVideo() {
       },
     },
     (res) => {
-      if (res && res.success && Array.isArray(res.data?.segments)) {
+      if (res && res.success && Array.isArray(res.data?.segments) && res.data.segments.length > 0) {
         ytSegments = res.data.segments;
       }
     },
@@ -518,6 +665,9 @@ function setupYouTubeVideoListeners() {
 
   video.removeEventListener('timeupdate', onTimeUpdate);
   video.addEventListener('timeupdate', onTimeUpdate);
+
+  setupNativeCaptionObserver();
+  checkYouTubeSubtitlesButton();
 }
 
 function onTimeUpdate() {
@@ -585,7 +735,7 @@ if (typeof document !== 'undefined') {
   });
 }
 
-// Periodic check for YouTube SPA navigation
+// Periodic check for YouTube SPA navigation & CC state
 if (typeof window !== 'undefined') {
   window.addEventListener('yt-navigate-finish', () => {
     fetchTranscriptForCurrentVideo();
@@ -598,6 +748,11 @@ if (typeof window !== 'undefined') {
       if (videoId && videoId !== ytCurrentVideoId) {
         fetchTranscriptForCurrentVideo();
         setupYouTubeVideoListeners();
+      } else {
+        checkYouTubeSubtitlesButton();
+        if (!captionObserver) {
+          setupNativeCaptionObserver();
+        }
       }
     }
   }, 1000);
