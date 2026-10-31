@@ -52,7 +52,7 @@ Request: `{ "selectedText": "scale", "contextText": "...we need to scale this sy
 Response: `{ "meaning": "to increase in size or amount proportionally", "example": "The startup needs to scale its infrastructure.", "cached": false }`
 
 **`POST /vocabulary/occurrences`** — Save step (creates item/meaning/occurrence chain as needed)
-Request: `{ "lemma": "scale", "meaning": "...", "example": "...", "sentence": "...", "sourceUrl": "..." }`
+Request: `{ "lemma": "scale", "meaning": "...", "example": "...", "sentence": "...", "sourceUrl": "...", "mediaMetadata"?: { "provider": "youtube" | "netflix", "videoId": "...", "timestampSeconds": 102, "videoTitle": "..." } }`
 Response: `{ "occurrenceId": "...", "vocabularyItemId": "...", "meaningId": "..." }`
 
 **`GET /vocabulary`** — list grouped by item
@@ -269,6 +269,24 @@ Response: `{ "_id": "...", "name": "...", "description": "...", "module": "...",
 
 **`DELETE /permissions/:id`**
 Response: `{ "success": true }`
+
+## Video & Transcripts (Phase 2)
+
+**`POST /video/transcript`** — fetch or retrieve cached subtitles for media URL
+Request: `{ "videoUrl": "https://www.youtube.com/watch?v=...", "language"?: "en" }`
+Response: `{ "videoId": "...", "provider": "youtube", "videoTitle": "...", "durationSeconds": 300, "segments": [{ "index": 0, "startSeconds": 1.2, "endSeconds": 4.5, "text": "...", "translation": "..." }] }`
+
+## Dictation (Phase 2)
+
+**`POST /dictation/sessions`** — record completed or progressive dictation session
+Request: `{ "videoId": "...", "completedSegments": 12, "totalSegments": 15, "accuracyScore": 92, "timeSpentSeconds": 180, "mistakesCount": 4 }`
+Response: `{ "sessionId": "...", "accuracyScore": 92, "recordedAt": "..." }`
+
+## Shadowing & Speech Evaluation (Phase 2)
+
+**`POST /shadowing/evaluate`** — evaluate speech utterance against target sentence cue
+Request: `{ "targetText": "The startup needs to scale its infrastructure.", "userAudioBase64"?: "...", "userTranscript"?: "The startup need to scale it infrastructure." }`
+Response: `{ "overallScore": 82, "transcribedText": "...", "wordsEvaluation": [{ "word": "The", "status": "correct", "phonemeFeedback": null }, { "word": "needs", "status": "minor_error", "phonemeFeedback": "Missing final /z/ sound" }], "generalTips": "Pay attention to third-person singular 'needs'." }`
 
 ## Error Codes (non-exhaustive, extend as needed)
 

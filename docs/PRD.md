@@ -15,53 +15,73 @@
 - **G2 (Context Preservation):** Retain sentence context, source URL, and specific meaning for every saved item.
 - **G3 (Loop Closure):** Transform passive lookups into active, scheduled spaced reviews and AI quizzes.
 - **G4 (Active Application):** Provide AI chat and writing review tools to practice using saved vocabulary.
+- **G5 (Multimodal Listening & Speaking — P2):** Turn authentic streaming media (YouTube/Netflix) into active dictation and speech shadowing environments.
 
-### Non-Goals (Strictly Out of MVP Scope)
-- Full-page DOM scanning, passive page monitoring, or general document translation.
-- YouTube/Netflix subtitle integration, dictation, shadowing, or speech/pronunciation recognition.
-- Non-multiple-choice quiz types (fill-in-the-blank, listening, writing quizzes).
-- Full AI tutoring (syllabus management, adaptive grade-level curriculum).
-- Export to CSV/Anki, team/classroom sharing, or complex gamification streaks.
+### Non-Goals (Out of Scope)
+- Full-page DOM scanning or passive page telemetry (violates privacy boundary).
+- Full AI tutoring with syllabus management or adaptive grade-level curriculum.
+- Export to CSV/Anki or team/classroom sharing.
 - Social features (leaderboards, friends, shared decks).
 - Offline mode (Extension and Web both require network for AI calls).
 
 ## 3. Target User & JTBD
 
-- **Primary User:** University students & young adults (B1–B2 level) reading English content online.
+- **Primary User:** University students & young adults (B1–B2 level) reading English content and watching English video online.
 - **JTBD-1 (In-Context Lookup):** Understand words in their exact current sentence without losing reading momentum.
-- **JTBD-2 (Contextual Saving):** Preserve words along with original sentences to remember usage.
-- **JTBD-3 (Spaced Recall):** Receive automated review prompts based on memory decay.
-- **JTBD-4 (Self-Testing):** Validate retention through AI-generated quizzes.
-- **JTBD-5 (Application):** Practice using saved words in AI chat conversations and essays.
+- **JTBD-2 (Contextual Saving):** Preserve words along with original sentences and video timestamps to remember usage.
+- **JTBD-3 (Spaced Recall):** Receive automated review prompts based on memory decay with audio/video context.
+- **JTBD-4 (Self-Testing):** Validate retention through AI-generated quizzes and listening dictation.
+- **JTBD-5 (Active Application):** Practice using saved words in AI chat conversations, writing essays, and line-by-line speech shadowing.
 
 ## 4. Priority Tiers
 
-All functional requirements are classified into two priority tiers:
+All functional requirements are classified into three priority tiers:
 
 | Tier | Definition | Modules |
 |---|---|---|
 | **P0 — Launch Blocker** | Must be fully functional before first release. Without these, the core learning loop is broken. | Auth, Extension Capture, Vocabulary Management, Flashcard Review |
-| **P1 — MVP Enrichment** | Should ship with MVP but can be stubbed or deferred 1–2 sprints without breaking the core loop. | Quiz, AI Chat, Writing Review, Dashboard & Settings |
+| **P1 — MVP Enrichment** | Enriches textual learning loop and retention tracking. (Completed) | Quiz, AI Chat, Writing Review, Dashboard & Settings |
+| **P2 — Media & Multimodal (Current Roadmap)** | Transforms video consumption into active listening and speaking practice. Expands learning loop to media & speech. | Video Dual Subtitles & Overlay, Dictation Practice, Shadowing & AI Voice Assessment, Web Video Study Room, Multi-modal Flashcards |
 
-> **Rule:** All P0 features must pass acceptance criteria and have e2e test coverage before any P1 work begins.
+> **Rule:** All P0 and P1 features must remain green across all test suites as P2 development proceeds.
 
 ## 5. User Journey — High-Level Flow
 
 ```mermaid
-flowchart LR
-    A["Browse webpage"] --> B["Select unknown word"]
-    B --> C["Extension popup: AI explains in context"]
-    C --> D{"Save to bank?"}
-    D -- Yes --> E["Vocabulary bank\n(3-layer: item→meaning→occurrence)"]
-    D -- No --> A
-    E --> F["Flashcard Review\n(SM-2 scheduling)"]
-    E --> G["AI Quiz\n(multiple-choice)"]
-    E --> H["AI Chat\n(conversation practice)"]
-    E --> I["Writing Review\n(essay feedback)"]
-    F --> J["Dashboard\n(progress tracking)"]
-    G --> J
-    H --> J
-    I --> J
+flowchart TD
+    subgraph Capture["1. Contextual Capture"]
+        A["Browse Web / Read Articles"] --> B["Select unknown word"]
+        B --> C["Popup: AI explains in-context"]
+        V1["Watch YouTube / Netflix"] --> V2["Interactive Dual Subtitles"]
+        V2 --> V3["Click subtitle word (Auto-pause)"]
+        V3 --> C
+        C --> D{"Save to bank?"}
+    end
+
+    subgraph CoreBank["2. Vocabulary Bank"]
+        D -- Yes --> E["Vocabulary Bank\n(3-layer: item → meaning → occurrence + video metadata)"]
+    end
+
+    subgraph Retention["3. Retention & Review"]
+        E --> F["Flashcard Review\n(SM-2 + Context Video/Audio Clip)"]
+        E --> G["AI Multiple-Choice Quiz"]
+        E --> D1["Dictation Practice\n(Real-time typing diff)"]
+    end
+
+    subgraph Application["4. Active Production"]
+        E --> H["AI Conversational Chat"]
+        E --> I["AI Writing Review"]
+        E --> S1["Shadowing Mode\n(Voice Recording & AI Pronunciation Score)"]
+    end
+
+    subgraph Tracking["5. Progress Dashboard"]
+        F --> J["Dashboard Stats & Progress"]
+        G --> J
+        D1 --> J
+        H --> J
+        I --> J
+        S1 --> J
+    end
 ```
 
 ## 6. Functional Requirements (FR)
@@ -280,6 +300,91 @@ flowchart LR
 - _AC-1:_ Editable fields: `displayName`, `avatarUrl`, `dailyReviewGoal`, `quizDefaultCount`, `timezone`.
 - _AC-2:_ `PATCH /users/me/settings` → validates and updates user settings.
 - _AC-3:_ `timezone` defaults to browser-detected timezone on registration; used for `dueDate` boundary calculation.
+
+### 6.9 Video Subtitle Interaction (Chrome Extension) — P2
+
+**FR-VIDEO-001: Dual Subtitles on Video Players**
+- Extension renders dual subtitles (English + Vietnamese) over supported streaming players (YouTube, Netflix).
+- _AC-1:_ When video loads on YouTube (`youtube.com/watch*`), inject custom subtitle overlay layer synced to active player time.
+- _AC-2:_ Subtitle styling (font size, background opacity, dual/single language toggle) is customizable via quick settings overlay widget.
+- _AC-3:_ Video tracks are fetched without sending user credentials or telemetry to third parties.
+
+**FR-VIDEO-002: Interactive Subtitle Word Lookup (Click-to-Lookup)**
+- Subtitle tokens are individually clickable.
+- _AC-1:_ Hovering or clicking a word in the active subtitle cue immediately triggers video `auto-pause`.
+- _AC-2:_ Displays LinguaFlow contextual lookup popup explaining the target word in the context of the active sentence cue.
+- _AC-3:_ Resuming video playback auto-dismisses lookup popup unless pinned.
+
+**FR-VIDEO-003: Video Control Hotkeys**
+- Dedicated keyboard shortcuts to navigate video sentence-by-sentence.
+- _AC-1:_ `A`: jump to start of previous subtitle cue.
+- _AC-2:_ `S`: replay current subtitle cue from beginning.
+- _AC-3:_ `D`: jump to start of next subtitle cue.
+- _AC-4:_ `Space`: pause/resume playback (unmodified native behavior preserved).
+
+**FR-VIDEO-004: Video Contextual Save with Timestamp**
+- Words saved from video include media metadata.
+- _AC-1:_ 1-click save captures: `lemma`, in-context `meaning`, full subtitle `sentence`, `sourceUrl` with timestamp query (e.g. `&t=102s`).
+- _AC-2:_ Occurrence document saves `mediaMetadata`: `{ provider: 'youtube' | 'netflix', videoId, timestampSeconds, videoTitle }`.
+
+### 6.10 Video Dictation Practice (Listening) — P2
+
+**FR-DICT-001: Sentence Looping & Hidden Subtitles**
+- Intensive listening mode by hiding subtitle text and looping dialogue segment.
+- _AC-1:_ In Dictation mode, active subtitle text is hidden (`*** *** ***`).
+- _AC-2:_ Player automatically loops current dialogue segment until user submits input or triggers reveal.
+
+**FR-DICT-002: Real-Time Typing Diff Check**
+- Character-by-character validation while user types.
+- _AC-1:_ As user types in input field, letters matching target subtitle turn green; incorrect characters turn red with subtle shake.
+- _AC-2:_ Typing passes word boundary on space only when previous word is spelled correctly.
+- _AC-3:_ Completing sentence advances automatically to next video segment.
+
+**FR-DICT-003: Listening Assist & Hints**
+- Provide tiered help when user gets stuck.
+- _AC-1:_ Slow playback toggle (`0.75x`, `0.5x`) with pitch correction.
+- _AC-2:_ "Hint" button reveals next un-typed character or word.
+- _AC-3:_ "Give Up / Reveal" reveals full sentence and records incomplete attempt.
+
+### 6.11 Shadowing & AI Voice Assessment (Speaking) — P2
+
+**FR-SHADOW-001: Line-by-Line Recording**
+- User listens to native cue, then records their voice shadowing the sentence.
+- _AC-1:_ Native speaker cue plays → video pauses → 3-second countdown → microphone records user utterance.
+- _AC-2:_ Recording captures audio via Web Audio API and produces clean audio snippet for evaluation.
+
+**FR-SHADOW-002: AI Pronunciation & Fluency Evaluation**
+- Evaluate speech accuracy and intonation.
+- _AC-1:_ Audio / transcript evaluated against target cue via `AiModule`.
+- _AC-2:_ Returns color-coded word breakdown: Green (accurate pronunciation), Yellow (acceptable/minor stress error), Red (mispronounced/omitted).
+- _AC-3:_ Produces overall Pronunciation Score (0–100) and specific articulation feedback for missed phonemes.
+
+**FR-SHADOW-003: A/B Audio Comparison**
+- Dual-track playback to compare student voice with native video audio.
+- _AC-1:_ UI provides one-click switch between "Native Audio" and "My Recording".
+- _AC-2:_ Synchronized waveform or visual timeline highlighting intonation pitch differences.
+
+### 6.12 Web Video Study Room — P2
+
+**FR-ROOM-001: Import Video via URL**
+- Learn directly inside LinguaFlow Web application from YouTube link.
+- _AC-1:_ Input field accepts valid YouTube URL → parses `videoId` → retrieves transcript via backend.
+- _AC-2:_ Embedded YouTube IFrame player synchronized with full interactive script panel on the right.
+
+**FR-ROOM-002: Interactive Script Navigation**
+- Entire video transcript presented as clickable list of dialogue cues.
+- _AC-1:_ Clicking any transcript row immediately jumps video player to that cue's timestamp.
+- _AC-2:_ Active cue highlights automatically in sync with video playback progress.
+
+**FR-ROOM-003: Three-Mode Switching**
+- Switch between Watch Mode (interactive subtitles), Dictation Mode, and Shadowing Mode in the same study room.
+
+### 6.13 Multi-Modal Flashcard Playback (SRS) — P2
+
+**FR-CARD-001: Video Context Clip Playback on Card Back**
+- Review cards saved from video can replay the exact audio/video snippet.
+- _AC-1:_ If occurrence has `mediaMetadata`, card back displays "Play Context Clip" button.
+- _AC-2:_ Clicking button loads embedded player pre-rolled 2 seconds before timestamp and stops 3 seconds after.
 
 ## 7. Edge Cases & Error Handling (EDGE)
 

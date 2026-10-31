@@ -24,9 +24,9 @@
 
 | Component | Responsibility |
 |---|---|
-| `frontend/` (React + TS + Vite) | SPA: Dashboard, Vocabulary Manager, Flashcard Review, Quiz, AI Chat, Writing Review, Settings |
-| `extension/` (CRXJS: React + TS + Vite, Manifest V3) | `content script`: detects text selection, shows inline popup UI. `background` (service worker): holds auth token, proxies API calls. `popup`: extension toolbar icon UI (quick vocabulary list / login) |
-| `backend/` (NestJS + TS) | REST API. Modules: `AuthModule`, `UsersModule`, `RolesModule`, `PermissionsModule`, `VocabularyModule`, `ReviewModule`, `QuizModule`, `ChatModule`, `WritingModule`, `DashboardModule`, `AiModule` |
+| `frontend/` (React + TS + Vite) | SPA: Dashboard, Vocabulary Manager, Flashcard Review, Quiz, AI Chat, Writing Review, Settings, Video Study Room (P2) |
+| `extension/` (CRXJS: React + TS + Vite, Manifest V3) | `content script`: detects text selection, shows inline popup UI, injects video subtitle overlay layer (P2). `background` (service worker): holds auth token, proxies API calls. `popup`: extension toolbar icon UI |
+| `backend/` (NestJS + TS) | REST API. Modules: `AuthModule`, `UsersModule`, `RolesModule`, `PermissionsModule`, `VocabularyModule`, `ReviewModule`, `QuizModule`, `ChatModule`, `WritingModule`, `DashboardModule`, `VideoModule` (P2), `DictationModule` (P2), `ShadowingModule` (P2), `AiModule` |
 | MongoDB | Persistence — see `DATA-SCHEMA.md` |
 | Gemini API | Called only through `AiModule` — never imported directly in other modules |
 
@@ -51,6 +51,9 @@ linguaflow/
 │           ├── chat/
 │           ├── writing/
 │           ├── dashboard/
+│           ├── video/       # P2: VideoModule (YouTube transcript fetcher & parser)
+│           ├── dictation/   # P2: DictationModule (listening typing sessions)
+│           ├── shadowing/   # P2: ShadowingModule (voice recording & speech scoring)
 │           └── ai/          # AiModule — Gemini wrapper, provider-agnostic
 ├── frontend/            # React + Vite — standalone Node project
 │   ├── package.json
@@ -60,7 +63,7 @@ linguaflow/
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
-│       ├── content/         # content script (selection listener + popup UI)
+│       ├── content/         # content script (selection listener + video player overlay)
 │       ├── background/      # service worker
 │       └── popup/           # toolbar popup
 └── docs/
@@ -89,25 +92,26 @@ linguaflow/
 
 ## 5. Data Flow — Contextual Capture (core loop)
 
-1. User selects text on any webpage → `content script` captures `selectedText` + minimum surrounding context (see §8).
+1. User selects text on any webpage (or clicks subtitle word in video) → `content script` captures `selectedText` + minimum surrounding context (and timestamp if video).
 2. `content script` → `background` → `POST /vocabulary/lookup { selectedText, contextText, sourceUrl }`.
 3. `VocabularyController` → `AiModule.explainInContext()` → Gemini → `{ meaning, example }`.
 4. Response is cached (see §7) and returned to the Extension popup UI.
-5. User clicks Save → `POST /vocabulary/occurrences` → backend resolves/creates `vocabularyItem` → `meaning` → `occurrence` (see `DATA-SCHEMA.md` — never flattened).
+5. User clicks Save → `POST /vocabulary/occurrences` → backend resolves/creates `vocabularyItem` → `meaning` → `occurrence` (see `DATA-SCHEMA.md` — never flattened, stores `mediaMetadata` if captured from video).
 
 ## 6. AI Layer — Provider-Agnostic by Design
 
-- `AiModule` exposes an interface, e.g.:
+- `AiModule` exposes an interface:
   ```ts
   interface AIProvider {
     explainInContext(selectedText: string, contextText: string): Promise<{ meaning: string; example: string }>;
     generateQuiz(occurrences: OccurrenceDto[], count: number): Promise<QuizQuestionDto[]>;
     chat(history: ChatMessageDto[], message: string): Promise<string>;
     reviewWriting(text: string): Promise<{ feedback: string; suggestions: string[] }>;
+    evaluateSpeech(targetText: string, speechInput: string): Promise<SpeechEvaluationDto>; // P2
   }
   ```
 - `GeminiProvider implements AIProvider` is the only place the Gemini SDK is imported.
-- No other module (Vocabulary, Quiz, Chat, Writing) may import the Gemini SDK directly — enforced in `PROJECT-RULES.md`.
+- No other module (Vocabulary, Quiz, Chat, Writing, Shadowing) may import the Gemini SDK directly — enforced in `PROJECT-RULES.md`.
 - Swapping providers later = writing a new class implementing `AIProvider`, no changes elsewhere.
 
 ## 7. Caching & Rate-Limiting (cost control)
@@ -141,3 +145,23 @@ linguaflow/
 - ✅ Auth mechanism → JWT bearer, shared Web/Extension (§4)
 - ✅ Repo structure → flat sibling directories (§3)
 - ⬜ Still open: exact rate-limit numbers (tune post-launch), whitelisted vs. all websites for Extension (deferred — MVP assumes all websites).
+
+## 11. Phase 2 Architecture — Video Streaming, Dictation & Speech Shadowing
+
+### 11.1 Video Overlay & Subtitle Injection (Extension)
+- **Player Anchoring:** Content script detects `<video>` element on YouTube / Netflix.
+- **Overlay Container:** Injects an isolated, non-intrusive container (`div.linguaflow-subtitle-overlay`) aligned with the player viewport.
+- **Dual Track Synchronization:** Synchronizes cue text using the video element's `timeupdate` event.
+- **Interactive Tokens:** Subtitle sentences are tokenized using regex word boundaries. Each word is a clickable `<span>` element. Clicking dispatches an auto-pause to the underlying video and positions the contextual lookup popup.
+
+### 11.2 Dictation Architecture
+- **Cue Looping:** Video playback range is clamped to `[cue.startSeconds, cue.endSeconds]`.
+- **Real-Time Diff Engine:** Pure client-side character-matching algorithm compares typed buffer against target subtitle string without server latency.
+
+### 11.3 Speech Shadowing & AI Pronunciation Architecture
+- **Audio Capture:** Uses browser Web Audio API / `MediaRecorder` with standard audio format.
+- **Speech Evaluation Pipeline:**
+  1. Frontend captures user voice recording.
+  2. Frontend performs initial fast client-side Speech-to-Text via Web Speech API (`SpeechRecognition`).
+  3. Audio or transcript is submitted to `POST /shadowing/evaluate`.
+  4. Backend `ShadowingModule` orchestrates evaluation through `AiModule.evaluateSpeech()`, scoring word stress, omission, and pronunciation accuracy against the reference cue.

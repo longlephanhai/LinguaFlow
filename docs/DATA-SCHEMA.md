@@ -147,6 +147,15 @@ A meaning can be captured multiple times in different sentences.
   sourceTitle: string | null, // <title> of the source page (captured by content script)
   capturedAt: Date,      // explicit capture timestamp (may differ from createdAt if offline-queued)
 
+  // --- Phase 2: Media & Video Metadata ---
+  mediaMetadata?: {
+    provider: 'youtube' | 'netflix' | 'web' | null, // media platform
+    videoId: string | null,                          // e.g. YouTube video ID
+    timestampSeconds: number | null,                 // exact dialogue timestamp in seconds
+    videoTitle: string | null,                       // title of the media
+    audioSnippetUrl: string | null,                  // optional cached audio slice URL
+  } | null,
+
   // --- SRS Review State (SM-2) ---
   review: {
     easeFactor: number,         // default 2.5 — SM-2 E-Factor
@@ -436,6 +445,105 @@ Defines user roles and maps them to a set of granted permissions.
 ```
 { name: 1 }        unique
 { isDeleted: 1 }
+```
+
+---
+
+## `videoTranscripts` (Phase 2) — cached parsed video subtitle tracks
+
+Stores segmented dialogue tracks parsed from YouTube or media URLs. Avoids re-fetching and parsing subtitles on every session.
+
+```ts
+{
+  _id: ObjectId,
+
+  // --- Identity ---
+  provider: string,         // "youtube" | "netflix"
+  videoId: string,          // external media identifier, indexed
+  language: string,         // "en" | "vi" | ...
+  videoTitle: string,
+  durationSeconds: number,
+
+  // --- Segments (Cue list) ---
+  segments: [
+    {
+      index: number,
+      startSeconds: number,
+      endSeconds: number,
+      text: string,          // target language text (English)
+      translation: string | null, // optional translated text (Vietnamese)
+    }
+  ],
+
+  // --- Timestamps ---
+  createdAt: Date,
+  updatedAt: Date,
+}
+```
+
+**Indexes:**
+```
+{ provider: 1, videoId: 1, language: 1 }  unique
+```
+
+---
+
+## `dictationSessions` (Phase 2) — listening dictation attempts
+
+Tracks user's listening typing performance on video dialogue segments.
+
+```ts
+{
+  _id: ObjectId,
+
+  // --- Ownership ---
+  userId: ObjectId,         // ref: users, indexed
+  videoId: string,          // media identifier
+
+  // --- Session Data ---
+  totalSegments: number,
+  completedSegments: number,
+  accuracyScore: number,     // 0..100 percentage
+  timeSpentSeconds: number,
+  mistakesCount: number,
+
+  // --- Timestamps ---
+  createdAt: Date,
+  updatedAt: Date,
+}
+```
+
+---
+
+## `shadowingAttempts` (Phase 2) — speech pronunciation recordings
+
+Records audio submissions, phoneme breakdown, and AI fluency scores.
+
+```ts
+{
+  _id: ObjectId,
+
+  // --- Ownership ---
+  userId: ObjectId,         // ref: users, indexed
+  videoId: string,          // media identifier
+  segmentIndex: number,
+
+  // --- Speech Evaluation ---
+  targetText: string,
+  transcribedText: string,
+  overallScore: number,     // 0..100
+  wordsEvaluation: [
+    {
+      word: string,
+      status: "correct" | "minor_error" | "mispronounced" | "omitted",
+      phonemeFeedback: string | null,
+    }
+  ],
+  audioUrl: string | null,  // stored audio recording URL (optional)
+
+  // --- Timestamps ---
+  createdAt: Date,
+}
 ```
 
 ---
