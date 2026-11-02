@@ -11,6 +11,7 @@ import {
   IconBrain, 
   IconMessageChatbot, 
   IconPencil, 
+  IconPlayerPlay,
   IconSettings,
   IconSun,
   IconMoon,
@@ -24,6 +25,7 @@ const navData = [
   { label: 'Quiz', icon: IconBrain, link: '/quiz' },
   { label: 'AI Chat', icon: IconMessageChatbot, link: '/chat' },
   { label: 'Writing', icon: IconPencil, link: '/writing' },
+  { label: 'Study Room', icon: IconPlayerPlay, link: '/video' },
   { label: 'Settings', icon: IconSettings, link: '/settings' },
 ];
 

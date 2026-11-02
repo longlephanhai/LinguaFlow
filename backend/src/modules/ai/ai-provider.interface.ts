@@ -32,11 +32,29 @@ export interface WritingReviewResult {
   aiModel?: string;
 }
 
+export interface WordSpeechEvaluation {
+  word: string;
+  status: 'correct' | 'minor_error' | 'mispronounced' | 'omitted';
+  phonemeFeedback: string | null;
+}
+
+export interface SpeechEvaluationResult {
+  overallScore: number;
+  transcribedText: string;
+  wordsEvaluation: WordSpeechEvaluation[];
+  generalTips: string;
+}
+
 export interface AIProvider {
   explainInContext(selectedText: string, contextText: string): Promise<ExplainInContextResult>;
   generateQuiz(items: QuizItemInput[], count: number): Promise<GeneratedQuestion[]>;
   chat(history: ChatMessageItem[], message: string, userVocabulary?: string[]): Promise<string>;
   reviewWriting(text: string): Promise<WritingReviewResult>;
+  evaluateSpeech(
+    targetText: string,
+    userTranscript: string,
+    userAudioBase64?: string,
+  ): Promise<SpeechEvaluationResult>;
 }
 
 export const AI_PROVIDER_TOKEN = Symbol('AI_PROVIDER_TOKEN');

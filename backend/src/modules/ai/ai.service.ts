@@ -80,5 +80,9 @@ export class AiService {
   async reviewWriting(text: string) {
     return this.aiProvider.reviewWriting(text);
   }
+
+  async evaluateSpeech(targetText: string, userTranscript: string, userAudioBase64?: string) {
+    return this.aiProvider.evaluateSpeech(targetText, userTranscript, userAudioBase64);
+  }
 }
 

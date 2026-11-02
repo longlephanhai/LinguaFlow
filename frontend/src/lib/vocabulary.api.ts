@@ -36,6 +36,14 @@ export interface OccurrenceItem {
   };
 }
 
+export interface MediaMetadataPayload {
+  provider?: 'youtube' | 'netflix' | 'web';
+  videoId?: string;
+  timestampSeconds?: number;
+  videoTitle?: string;
+  audioSnippetUrl?: string;
+}
+
 export interface SaveOccurrencePayload {
   lemma: string;
   meaning: string;
@@ -45,6 +53,7 @@ export interface SaveOccurrencePayload {
   sourceTitle?: string;
   partOfSpeech?: string;
   selectedText?: string;
+  mediaMetadata?: MediaMetadataPayload;
 }
 
 export const vocabularyApi = {
@@ -70,5 +79,18 @@ export const vocabularyApi = {
 
   deleteVocabularyItem: async (id: string): Promise<{ success: boolean }> => {
     return api.delete(`/vocabulary/${id}`) as unknown as Promise<{ success: boolean }>;
+  },
+
+  lookupInContext: async (
+    selectedText: string,
+    contextText: string,
+  ): Promise<{ lemma: string; meaning: string; example: string; partOfSpeech?: string | null; cached?: boolean }> => {
+    return api.post('/vocabulary/lookup', { selectedText, contextText }) as unknown as Promise<{
+      lemma: string;
+      meaning: string;
+      example: string;
+      partOfSpeech?: string | null;
+      cached?: boolean;
+    }>;
   },
 };

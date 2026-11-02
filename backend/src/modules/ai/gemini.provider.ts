@@ -8,6 +8,8 @@ import {
   GeneratedQuestion,
   ChatMessageItem,
   WritingReviewResult,
+  WordSpeechEvaluation,
+  SpeechEvaluationResult,
 } from './ai-provider.interface.js';
 
 @Injectable()
@@ -447,6 +449,169 @@ Respond ONLY with a valid JSON object matching this exact schema:
       },
       HttpStatus.BAD_GATEWAY,
     );
+  }
+
+  async evaluateSpeech(
+    targetText: string,
+    userTranscript: string,
+    userAudioBase64?: string,
+  ): Promise<SpeechEvaluationResult> {
+    const client = this.client || this.initClient();
+    const cleanTarget = targetText.trim();
+    const cleanTranscript = (userTranscript || '').trim();
+
+    if (!client) {
+      // Offline fallback comparison if no Gemini API key
+      return this.fallbackEvaluateSpeech(cleanTarget, cleanTranscript);
+    }
+
+    const prompt = `
+You are an expert English pronunciation, intonation, and speech assessment coach.
+The student is shadowing a target dialogue sentence from a video.
+
+Target reference sentence: "${cleanTarget}"
+Student transcribed speech: "${cleanTranscript || '(no audio or silent)'}"
+
+Evaluate the student's pronunciation, word completeness, and speech accuracy:
+1. "overallScore": an integer from 0 to 100 representing overall pronunciation and speech accuracy.
+2. "transcribedText": the transcribed student utterance (clean string).
+3. "wordsEvaluation": an array analyzing each word in the target sentence in original sequential order:
+   - "word": string (the exact target word, without leading/trailing punctuation)
+   - "status": "correct" | "minor_error" | "mispronounced" | "omitted"
+   - "phonemeFeedback": specific feedback string (e.g. "Missing final /z/ sound", "Vowel too short", or "Stress first syllable") or null if correct.
+4. "generalTips": a constructive 1-2 sentence tip on how the student can improve their pacing, intonation, or stress for this cue.
+
+Respond ONLY with a valid JSON object matching the schema above.
+`;
+
+    const candidateModels = Array.from(
+      new Set([
+        this.primaryModel,
+        'gemini-2.0-flash',
+        'gemini-2.5-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-flash-latest',
+      ]),
+    );
+
+    let lastError: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        const callPromise = client.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Model ${model} speech evaluation timeout after 10s`)), 10000),
+        );
+
+        const response = await Promise.race([callPromise, timeoutPromise]);
+        let raw = response.text?.trim() || '{}';
+        if (raw.startsWith('```json')) raw = raw.slice(7);
+        if (raw.startsWith('```')) raw = raw.slice(3);
+        if (raw.endsWith('```')) raw = raw.slice(0, -3);
+
+        const parsed = JSON.parse(raw.trim());
+
+        const score = typeof parsed.overallScore === 'number'
+          ? Math.max(0, Math.min(100, Math.round(parsed.overallScore)))
+          : 75;
+
+        const transcribedText = String(parsed.transcribedText || cleanTranscript || cleanTarget);
+        const generalTips = String(parsed.generalTips || 'Good job shadowing! Practice linking words smoothly.');
+
+        const rawWords = Array.isArray(parsed.wordsEvaluation) ? parsed.wordsEvaluation : [];
+        const wordsEvaluation: WordSpeechEvaluation[] = rawWords.map((item: any) => ({
+          word: String(item.word || ''),
+          status: ['correct', 'minor_error', 'mispronounced', 'omitted'].includes(item.status)
+            ? item.status
+            : 'correct',
+          phonemeFeedback: item.phonemeFeedback ? String(item.phonemeFeedback) : null,
+        }));
+
+        if (wordsEvaluation.length === 0) {
+          return this.fallbackEvaluateSpeech(cleanTarget, cleanTranscript);
+        }
+
+        return {
+          overallScore: score,
+          transcribedText,
+          wordsEvaluation,
+          generalTips,
+        };
+      } catch (err: any) {
+        lastError = err;
+        this.logger.warn(`Model ${model} failed for speech evaluation: ${err.message}. Trying next candidate...`);
+      }
+    }
+
+    this.logger.warn(`All candidate Gemini models failed for speech evaluation: ${lastError?.message}. Using algorithmic fallback.`);
+    return this.fallbackEvaluateSpeech(cleanTarget, cleanTranscript);
+  }
+
+  private fallbackEvaluateSpeech(targetText: string, userTranscript: string): SpeechEvaluationResult {
+    const targetWords = targetText
+      .replace(/[.,/#!$%^&*;:{}=\-_`~()?"]/g, '')
+      .split(/\s+/)
+      .filter((w) => w.length > 0);
+
+    const spokenWords = userTranscript
+      .toLowerCase()
+      .replace(/[.,/#!$%^&*;:{}=\-_`~()?"]/g, '')
+      .split(/\s+/)
+      .filter((w) => w.length > 0);
+
+    let matchCount = 0;
+    const wordsEvaluation: WordSpeechEvaluation[] = targetWords.map((word, idx) => {
+      const cleanWord = word.toLowerCase();
+      const spokenWord = spokenWords[idx];
+
+      if (spokenWord === cleanWord) {
+        matchCount++;
+        return {
+          word,
+          status: 'correct',
+          phonemeFeedback: null,
+        };
+      } else if (spokenWord && (spokenWord.includes(cleanWord) || cleanWord.includes(spokenWord))) {
+        matchCount += 0.7;
+        return {
+          word,
+          status: 'minor_error',
+          phonemeFeedback: 'Slight pronunciation difference',
+        };
+      } else if (!spokenWord) {
+        return {
+          word,
+          status: 'omitted',
+          phonemeFeedback: 'Word was omitted',
+        };
+      } else {
+        return {
+          word,
+          status: 'mispronounced',
+          phonemeFeedback: `Sounds like "${spokenWord}"`,
+        };
+      }
+    });
+
+    const calculatedScore = targetWords.length > 0
+      ? Math.round((matchCount / targetWords.length) * 100)
+      : 80;
+
+    return {
+      overallScore: Math.max(0, Math.min(100, calculatedScore)),
+      transcribedText: userTranscript || targetText,
+      wordsEvaluation,
+      generalTips: calculatedScore >= 80
+        ? 'Great pronunciation and pacing! Keep it up.'
+        : 'Focus on enunciating each consonant clearly and matching the speaker rhythm.',
+    };
   }
 }
 

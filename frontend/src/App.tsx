@@ -10,6 +10,7 @@ import { QuizPage } from './pages/QuizPage';
 import { ChatPage } from './pages/ChatPage';
 import { WritingPage } from './pages/WritingPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { VideoStudyRoomPage } from './pages/VideoStudyRoomPage';
 import { AppLayout } from './components/layout/AppLayout';
 import './App.css';
 
@@ -32,6 +33,8 @@ function App() {
               <Route path="/quiz" element={<QuizPage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/writing" element={<WritingPage />} />
+              <Route path="/video" element={<VideoStudyRoomPage />} />
+              <Route path="/study-room" element={<Navigate to="/video" replace />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>

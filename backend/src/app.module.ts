@@ -15,6 +15,8 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { ChatModule } from './modules/chat/chat.module.js';
 import { WritingModule } from './modules/writing/writing.module.js';
 import { VideoModule } from './modules/video/video.module.js';
+import { DictationModule } from './modules/dictation/dictation.module.js';
+import { ShadowingModule } from './modules/shadowing/shadowing.module.js';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { VideoModule } from './modules/video/video.module.js';
     ChatModule,
     WritingModule,
     VideoModule,
+    DictationModule,
+    ShadowingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
