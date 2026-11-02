@@ -21,6 +21,8 @@ import {
   ScrollArea,
   Loader,
   Box,
+  Switch,
+  SegmentedControl,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -40,9 +42,10 @@ import {
   IconSearch,
   IconSparkles,
   IconEye,
+  IconEyeOff,
   IconDeviceFloppy,
 } from '@tabler/icons-react';
-import { videoApi, type TranscriptSegment, type VideoTranscriptData } from '../lib/video.api';
+import { videoApi, type VideoTranscriptData } from '../lib/video.api';
 import { vocabularyApi } from '../lib/vocabulary.api';
 import { dictationApi } from '../lib/dictation.api';
 import { shadowingApi, type WordEvaluation } from '../lib/shadowing.api';
@@ -60,7 +63,7 @@ const SAMPLE_VIDEOS = [
     videoId: 'iCvmsMzlF7o',
   },
   {
-    title: 'BBC: English at Work',
+    title: 'Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)',
     url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     videoId: 'dQw4w9WgXcQ',
   },
@@ -91,6 +94,71 @@ export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+export interface KeywordBlank {
+  tokenIndex: number;
+  word: string;
+  cleanWord: string;
+}
+
+export const COMMON_STOPWORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but', 'nor', 'so', 'yet',
+  'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'up', 'about', 'into', 'over', 'after',
+  'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being',
+  'have', 'has', 'had', 'do', 'does', 'did',
+  'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
+  'my', 'your', 'his', 'her', 'its', 'our', 'their', 'mine', 'yours', 'hers', 'ours', 'theirs',
+  'this', 'that', 'these', 'those',
+  'can', 'could', 'will', 'would', 'shall', 'should', 'may', 'might', 'must',
+  'not', 'no', 'too', 'very', 'just', 'all', 'any', 'both', 'each', 'few', 'more', 'some',
+  'there', 'here', 'when', 'where', 'why', 'how', 'what', 'which', 'who', 'whom',
+  'of', 'as', 'if', 'then', 'than', 's', 't', 're', 've', 'd', 'll', 'm',
+  'youre', 'theyre', 'were', 'dont', 'doesnt', 'didnt', 'wont', 'cant',
+]);
+
+export function getKeywordBlanks(text: string): KeywordBlank[] {
+  if (!text) return [];
+  const rawTokens = text.trim().split(/\s+/);
+  const candidates: KeywordBlank[] = [];
+
+  rawTokens.forEach((token, idx) => {
+    // Strip contractions and punctuation for stopword lookup
+    const clean = token.toLowerCase().replace(/'[a-z]+/g, '').replace(/[^a-z0-9]/g, '');
+    if (clean.length >= 3 && !COMMON_STOPWORDS.has(clean)) {
+      candidates.push({
+        tokenIndex: idx,
+        word: token,
+        cleanWord: clean,
+      });
+    }
+  });
+
+  if (candidates.length === 0 && rawTokens.length > 0) {
+    const sorted = rawTokens
+      .map((token, idx) => ({
+        tokenIndex: idx,
+        word: token,
+        cleanWord: token.toLowerCase().replace(/[^a-z0-9]/g, ''),
+      }))
+      .filter((t) => t.cleanWord.length > 0)
+      .sort((a, b) => b.cleanWord.length - a.cleanWord.length);
+
+    if (sorted[0]) candidates.push(sorted[0]);
+  }
+
+  // Limit to at most 3 key words per segment so it's focused and not overwhelming
+  if (candidates.length > 3) {
+    const topIndices = new Set(
+      [...candidates]
+        .sort((a, b) => b.cleanWord.length - a.cleanWord.length)
+        .slice(0, 3)
+        .map((c) => c.tokenIndex),
+    );
+    return candidates.filter((c) => topIndices.has(c.tokenIndex));
+  }
+
+  return candidates;
 }
 
 export function VideoStudyRoomPage() {
@@ -124,7 +192,19 @@ export function VideoStudyRoomPage() {
   const [isSavingWord, setIsSavingWord] = useState<boolean>(false);
 
   // Dictation mode state
+  const [dictationType, setDictationType] = useState<'keywords' | 'full'>('keywords');
+  const [filledBlankIndices, setFilledBlankIndices] = useState<number[]>([]);
+  const [activeBlankIndex, setActiveBlankIndex] = useState<number>(0);
+  const [showDictationSubtitle, setShowDictationSubtitle] = useState<boolean>(false);
   const [dictationInput, setDictationInput] = useState<string>('');
+  const [dictationFeedback, setDictationFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [submittedFullDiff, setSubmittedFullDiff] = useState<{
+    diff: { targetWord: string; userWord: string; isCorrect: boolean }[];
+    isAllCorrect: boolean;
+  } | null>(null);
   const [dictationMistakes, setDictationMistakes] = useState<number>(0);
   const [dictationCompletedIndices, setDictationCompletedIndices] = useState<number[]>([]);
   const [dictationRevealed, setDictationRevealed] = useState<boolean>(false);
@@ -150,7 +230,9 @@ export function VideoStudyRoomPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const activeCueRowRef = useRef<HTMLDivElement | null>(null);
+  const scriptViewportRef = useRef<HTMLDivElement | null>(null);
   const userAudioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const [autoScroll, setAutoScroll] = useState<boolean>(true);
 
   // Load Video Transcript
   const handleLoadVideo = async (urlToLoad?: string) => {
@@ -173,66 +255,12 @@ export function VideoStudyRoomPage() {
       setDictationInput('');
       setShadowingEvaluation(null);
     } catch (err: any) {
-      // Fallback sample mock transcript for testing or offline demonstration if YouTube API block occurs
-      const sampleSegments: TranscriptSegment[] = [
-        {
-          index: 0,
-          startSeconds: 24.5,
-          endSeconds: 34.0,
-          text: 'Thank you. I am honored to be with you today at your commencement from one of the finest universities in the world.',
-          translation: 'Cảm ơn các bạn. Tôi rất vinh dự được có mặt cùng các bạn hôm nay tại lễ tốt nghiệp từ một trong những trường đại học tốt nhất trên thế giới.',
-        },
-        {
-          index: 1,
-          startSeconds: 34.5,
-          endSeconds: 45.0,
-          text: 'I never graduated from college. Truth be told, this is the closest I have ever gotten to a college graduation.',
-          translation: 'Tôi chưa từng tốt nghiệp đại học. Sự thật là đây là lần gần nhất tôi được dự một lễ tốt nghiệp.',
-        },
-        {
-          index: 2,
-          startSeconds: 45.5,
-          endSeconds: 56.5,
-          text: 'Today I want to tell you three stories from my life. That is it. No big deal. Just three stories.',
-          translation: 'Hôm nay tôi muốn kể cho các bạn ba câu chuyện từ cuộc đời tôi. Chỉ thế thôi. Không có gì to tát. Chỉ ba câu chuyện.',
-        },
-        {
-          index: 3,
-          startSeconds: 57.0,
-          endSeconds: 64.5,
-          text: 'The first story is about connecting the dots.',
-          translation: 'Câu chuyện đầu tiên là về việc kết nối các dấu chấm.',
-        },
-        {
-          index: 4,
-          startSeconds: 65.0,
-          endSeconds: 77.0,
-          text: 'I dropped out of Reed College after the first 6 months, but then stayed around as a drop-in for another 18 months or so before I really quit.',
-          translation: 'Tôi đã bỏ học ở Cao đẳng Reed sau 6 tháng đầu tiên, nhưng sau đó vẫn ở lại dự thính thêm khoảng 18 tháng trước khi thực sự nghỉ hẳn.',
-        },
-        {
-          index: 5,
-          startSeconds: 77.5,
-          endSeconds: 81.5,
-          text: 'So why did I drop out?',
-          translation: 'Vậy tại sao tôi lại bỏ học?',
-        },
-        {
-          index: 6,
-          startSeconds: 82.0,
-          endSeconds: 94.0,
-          text: 'It started before I was born. My biological mother was a young, unwed college graduate student, and she decided to put me up for adoption.',
-          translation: 'Mọi chuyện bắt đầu từ trước khi tôi ra đời. Mẹ đẻ của tôi là một nữ sinh viên tốt nghiệp đại học trẻ tuổi, chưa kết hôn, và bà quyết định cho tôi làm con nuôi.',
-        },
-      ];
-
-      setVideoData({
-        videoId,
-        provider: 'youtube',
-        videoTitle: "Steve Jobs' 2005 Stanford Commencement Address",
-        durationSeconds: 905,
-        segments: sampleSegments,
-      });
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to fetch video transcript. Please make sure the video has English subtitles available.';
+      setErrorMessage(message);
+      setVideoData(null);
     } finally {
       setIsLoading(false);
     }
@@ -325,6 +353,8 @@ export function VideoStudyRoomPage() {
 
   // Determine active cue from currentTime
   useEffect(() => {
+    // In Dictation mode, the learner is practicing the selected cue and it should not jump cues during loop
+    if (activeTab === 'dictation') return;
     if (!videoData?.segments?.length) return;
     const index = videoData.segments.findIndex(
       (s) => currentTime >= s.startSeconds && currentTime <= s.endSeconds,
@@ -332,14 +362,54 @@ export function VideoStudyRoomPage() {
     if (index !== -1 && index !== currentCueIndex) {
       setCurrentCueIndex(index);
     }
-  }, [currentTime, videoData?.segments]);
+  }, [currentTime, videoData?.segments, activeTab, currentCueIndex]);
+
+  // Auto-scroll active cue into view when it progresses beyond visible scroll bounds
+  useEffect(() => {
+    if (!autoScroll || activeTab !== 'script') return;
+
+    const rafId = requestAnimationFrame(() => {
+      const viewport = scriptViewportRef.current;
+      const activeEl = activeCueRowRef.current;
+      if (!viewport || !activeEl) return;
+
+      const viewportRect = viewport.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+
+      // Check if cue is running past bottom or above top of scroll viewport
+      const buffer = 24;
+      const isAbove = activeRect.top < viewportRect.top + buffer;
+      const isBelow = activeRect.bottom > viewportRect.bottom - buffer;
+
+      if (isAbove || isBelow) {
+        const relativeTop = activeRect.top - viewportRect.top + viewport.scrollTop;
+        const targetScrollTop = Math.max(
+          0,
+          relativeTop - viewport.clientHeight / 2 + activeRect.height / 2,
+        );
+
+        if (typeof viewport.scrollTo === 'function') {
+          viewport.scrollTo({
+            top: targetScrollTop,
+            behavior: 'smooth',
+          });
+        } else {
+          viewport.scrollTop = targetScrollTop;
+        }
+      }
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [currentCueIndex, autoScroll, activeTab]);
 
   // Handle Dictation sentence loop
   useEffect(() => {
     if (activeTab === 'dictation' && isPlaying && videoData?.segments?.length) {
       const currentCue = videoData.segments[currentCueIndex];
       if (currentCue && currentTime >= currentCue.endSeconds) {
-        seekToTimestamp(currentCue.startSeconds);
+        if (playerRef.current?.seekTo) {
+          playerRef.current.seekTo(currentCue.startSeconds, true);
+        }
       }
     }
   }, [activeTab, isPlaying, currentTime, currentCueIndex, videoData?.segments]);
@@ -383,12 +453,32 @@ export function VideoStudyRoomPage() {
       if (!videoData?.segments || !videoData.segments[index]) return;
       setCurrentCueIndex(index);
       setDictationInput('');
+      setFilledBlankIndices([]);
+      setActiveBlankIndex(0);
       setDictationRevealed(false);
+      setShowDictationSubtitle(false);
+      setDictationFeedback(null);
+      setSubmittedFullDiff(null);
       setShadowingEvaluation(null);
       seekToTimestamp(videoData.segments[index].startSeconds);
     },
     [videoData?.segments, seekToTimestamp],
   );
+
+  // Reset cue-specific dictation state ONLY when cue index actually changes
+  const prevCueIndexRef = useRef<number>(currentCueIndex);
+  useEffect(() => {
+    if (prevCueIndexRef.current !== currentCueIndex) {
+      prevCueIndexRef.current = currentCueIndex;
+      setDictationInput('');
+      setFilledBlankIndices([]);
+      setActiveBlankIndex(0);
+      setDictationRevealed(false);
+      setShowDictationSubtitle(false);
+      setDictationFeedback(null);
+      setSubmittedFullDiff(null);
+    }
+  }, [currentCueIndex]);
 
   const changePlaybackSpeed = (speed: number) => {
     setPlaybackSpeed(speed);
@@ -484,93 +574,309 @@ export function VideoStudyRoomPage() {
     }
   };
 
-  // Dictation Mode Logic: Real-time character diff check
+  // Dictation Mode Logic: Real-time character diff check or keyword blanks
   const activeCue = videoData?.segments?.[currentCueIndex];
   const targetDictationSentence = activeCue?.text || '';
+  const keywordBlanks = getKeywordBlanks(targetDictationSentence);
+  const activeBlank = keywordBlanks[activeBlankIndex];
 
   const renderDictationDiff = () => {
     if (!targetDictationSentence) return null;
     if (dictationRevealed) {
       return (
-        <Text size="lg" fw={600} c="blue">
+        <Text size="md" fw={600} c="blue">
           {targetDictationSentence}
         </Text>
       );
     }
 
-    const targetChars = targetDictationSentence.split('');
-    const typedChars = dictationInput.split('');
+    if (dictationType === 'keywords') {
+      const rawTokens = targetDictationSentence.trim().split(/\s+/);
+      const blankMap = new Map<number, { blank: KeywordBlank; blankIdx: number }>();
+      keywordBlanks.forEach((b, i) => blankMap.set(b.tokenIndex, { blank: b, blankIdx: i }));
 
-    return (
-      <Group gap={2} wrap="wrap">
-        {targetChars.map((char, index) => {
-          const typedChar = typedChars[index];
-          let color = 'gray';
-          let displayChar = char === ' ' ? '\u00A0' : '*';
-
-          if (typedChar !== undefined) {
-            displayChar = char;
-            if (typedChar.toLowerCase() === char.toLowerCase()) {
-              color = 'green';
-            } else {
-              color = 'red';
+      return (
+        <Group gap="xs" wrap="wrap" align="center">
+          {rawTokens.map((token, idx) => {
+            const blankEntry = blankMap.get(idx);
+            if (!blankEntry) {
+              return (
+                <Text key={idx} size="md" fw={500} c="dark.7">
+                  {token}
+                </Text>
+              );
             }
-          }
 
-          return (
-            <Text
-              key={index}
-              component="span"
-              fw={700}
-              c={color}
-              style={{
-                fontFamily: 'monospace',
-                fontSize: '1.25rem',
-                borderBottom: typedChar === undefined ? '2px solid #ced4da' : undefined,
-                minWidth: char === ' ' ? '12px' : 'auto',
-              }}
-            >
-              {displayChar}
-            </Text>
-          );
-        })}
+            const { blank, blankIdx } = blankEntry;
+            const isFilled = filledBlankIndices.includes(blankIdx);
+            const isActive = blankIdx === activeBlankIndex;
+
+            if (isFilled) {
+              return (
+                <Badge
+                  key={idx}
+                  size="lg"
+                  color="green"
+                  variant="light"
+                  style={{ textTransform: 'none', cursor: 'pointer' }}
+                  onClick={() => setActiveBlankIndex(blankIdx)}
+                >
+                  {blank.word} ✓
+                </Badge>
+              );
+            }
+
+            if (isActive) {
+              return (
+                <Badge
+                  key={idx}
+                  size="lg"
+                  color="blue"
+                  variant="filled"
+                  style={{
+                    cursor: 'pointer',
+                    letterSpacing: '1px',
+                    textTransform: 'none',
+                    boxShadow: '0 0 0 2px var(--mantine-color-blue-3)',
+                  }}
+                  onClick={() => setActiveBlankIndex(blankIdx)}
+                >
+                  {'_ '.repeat(Math.min(blank.cleanWord.length, 6))} ({blank.cleanWord.length})
+                </Badge>
+              );
+            }
+
+            return (
+              <Badge
+                key={idx}
+                size="lg"
+                color="gray"
+                variant="outline"
+                style={{ cursor: 'pointer', textTransform: 'none' }}
+                onClick={() => setActiveBlankIndex(blankIdx)}
+              >
+                {'_ '.repeat(Math.min(blank.cleanWord.length, 6))}
+              </Badge>
+            );
+          })}
+        </Group>
+      );
+    }
+
+    // Full Sentence Mode
+    if (submittedFullDiff) {
+      return (
+        <Group gap="xs" wrap="wrap" align="center">
+          {submittedFullDiff.diff.map((item, idx) => {
+            if (item.isCorrect) {
+              return (
+                <Badge key={idx} size="lg" color="green" variant="light" style={{ textTransform: 'none' }}>
+                  {item.targetWord} ✓
+                </Badge>
+              );
+            }
+            return (
+              <Group key={idx} gap={4} align="center">
+                <Badge
+                  size="lg"
+                  color="red"
+                  variant="outline"
+                  style={{
+                    textTransform: 'none',
+                    textDecoration: item.userWord ? 'line-through' : undefined,
+                  }}
+                >
+                  {item.userWord || '(bỏ sót)'} ✗
+                </Badge>
+                <Text size="xs" c="dimmed">
+                  ({item.targetWord})
+                </Text>
+              </Group>
+            );
+          })}
+        </Group>
+      );
+    }
+
+    // Not submitted yet: Show masked word placeholders without revealing any characters!
+    const words = targetDictationSentence.trim().split(/\s+/);
+    return (
+      <Group gap="xs" wrap="wrap" align="center">
+        {words.map((w, idx) => (
+          <Text
+            key={idx}
+            component="span"
+            fw={700}
+            c="dimmed"
+            style={{
+              letterSpacing: '3px',
+              fontFamily: 'monospace',
+              fontSize: '1.15rem',
+              borderBottom: '2px solid #ced4da',
+              padding: '0 4px',
+            }}
+          >
+            {w
+              .split('')
+              .map((char) => (/[a-zA-Z0-9]/.test(char) ? '•' : char))
+              .join('')}
+          </Text>
+        ))}
       </Group>
     );
   };
 
   const handleDictationInputChange = (value: string) => {
     setDictationInput(value);
+    setDictationFeedback(null);
+  };
 
-    // Check mistake on current character
-    const target = targetDictationSentence;
-    if (value.length > 0) {
-      const lastTypedIdx = value.length - 1;
-      if (
-        lastTypedIdx < target.length &&
-        value[lastTypedIdx].toLowerCase() !== target[lastTypedIdx].toLowerCase()
-      ) {
-        setDictationMistakes((prev) => prev + 1);
-      }
-    }
+  const handleCheckDictation = () => {
+    if (!targetDictationSentence) return;
+    setDictationFeedback(null);
 
-    // Check sentence completion
-    if (value.trim().toLowerCase() === target.trim().toLowerCase()) {
-      if (!dictationCompletedIndices.includes(currentCueIndex)) {
-        setDictationCompletedIndices((prev) => [...prev, currentCueIndex]);
+    if (dictationType === 'keywords') {
+      if (!activeBlank) return;
+      const cleanTyped = dictationInput.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      const targetClean = activeBlank.cleanWord.toLowerCase();
+
+      if (!cleanTyped) {
+        setDictationFeedback({
+          type: 'error',
+          message: 'Vui lòng gõ từ bạn nghe được trước khi kiểm tra!',
+        });
+        return;
       }
-      setTimeout(() => {
-        if (currentCueIndex + 1 < (videoData?.segments?.length || 0)) {
-          jumpToCue(currentCueIndex + 1);
+
+      // Check if user typed the keyword OR the entire sentence
+      const isWordMatch = cleanTyped === targetClean;
+      const isFullMatch =
+        dictationInput.trim().toLowerCase().replace(/[^a-z0-9]/g, '') ===
+        targetDictationSentence.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      if (isWordMatch || isFullMatch) {
+        const nextFilled = isFullMatch
+          ? keywordBlanks.map((_, i) => i)
+          : [...filledBlankIndices, activeBlankIndex];
+
+        setFilledBlankIndices(nextFilled);
+        setDictationInput('');
+
+        if (nextFilled.length >= keywordBlanks.length) {
+          if (!dictationCompletedIndices.includes(currentCueIndex)) {
+            setDictationCompletedIndices((prev) => [...prev, currentCueIndex]);
+          }
+          setDictationFeedback({
+            type: 'success',
+            message: `Chính xác: "${activeBlank.word}"! Bạn đã hoàn thành toàn bộ câu 🎉`,
+          });
+          setTimeout(() => {
+            if (currentCueIndex + 1 < (videoData?.segments?.length || 0)) {
+              jumpToCue(currentCueIndex + 1);
+            }
+          }, 900);
+        } else {
+          setDictationFeedback({
+            type: 'success',
+            message: `Chính xác: "${activeBlank.word}"! Hãy tiếp tục điền từ tiếp theo 👏`,
+          });
+          const remaining = keywordBlanks
+            .map((_, i) => i)
+            .filter((i) => !nextFilled.includes(i));
+          if (remaining.length > 0) {
+            setActiveBlankIndex(remaining[0]);
+          }
         }
-      }, 700);
+      } else {
+        setDictationMistakes((prev) => prev + 1);
+        setDictationFeedback({
+          type: 'error',
+          message: `Từ "${dictationInput.trim()}" chưa chính xác. Đang phát lại câu thoại, hãy nghe kỹ lại nhé!`,
+        });
+        if (playerRef.current?.seekTo) {
+          playerRef.current.seekTo(activeCue?.startSeconds || 0, true);
+          playerRef.current.playVideo();
+        }
+      }
+    } else {
+      // Full Sentence mode
+      const trimmedInput = dictationInput.trim();
+      if (!trimmedInput) {
+        setDictationFeedback({
+          type: 'error',
+          message: 'Vui lòng gõ toàn bộ câu thoại bạn nghe được trước khi kiểm tra!',
+        });
+        return;
+      }
+
+      const targetWords = targetDictationSentence.trim().split(/\s+/);
+      const userWords = trimmedInput.split(/\s+/);
+
+      const diff = targetWords.map((tWord, idx) => {
+        const uWord = userWords[idx] || '';
+        const cleanT = tWord.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanU = uWord.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const isCorrect = cleanT === cleanU;
+        return {
+          targetWord: tWord,
+          userWord: uWord,
+          isCorrect,
+        };
+      });
+
+      const isAllCorrect = diff.every((d) => d.isCorrect) && userWords.length === targetWords.length;
+      setSubmittedFullDiff({ diff, isAllCorrect });
+
+      if (isAllCorrect) {
+        if (!dictationCompletedIndices.includes(currentCueIndex)) {
+          setDictationCompletedIndices((prev) => [...prev, currentCueIndex]);
+        }
+        setDictationFeedback({
+          type: 'success',
+          message: 'Xuất sắc! Bạn đã chép chính xác 100% câu thoại! 🎉',
+        });
+        setTimeout(() => {
+          if (currentCueIndex + 1 < (videoData?.segments?.length || 0)) {
+            jumpToCue(currentCueIndex + 1);
+          }
+        }, 900);
+      } else {
+        const errors =
+          diff.filter((d) => !d.isCorrect).length + Math.max(0, userWords.length - targetWords.length);
+        setDictationMistakes((prev) => prev + errors);
+        setDictationFeedback({
+          type: 'error',
+          message: `Có ${errors} lỗi sai (xem chi tiết gạch đỏ bên trên). Đang phát lại câu thoại để bạn nghe lại!`,
+        });
+        if (playerRef.current?.seekTo) {
+          playerRef.current.seekTo(activeCue?.startSeconds || 0, true);
+          playerRef.current.playVideo();
+        }
+      }
     }
   };
 
   const handleDictationHint = () => {
-    if (!targetDictationSentence) return;
-    const nextCharIndex = dictationInput.length;
-    if (nextCharIndex < targetDictationSentence.length) {
-      setDictationInput(targetDictationSentence.slice(0, nextCharIndex + 1));
+    if (dictationType === 'keywords') {
+      if (!activeBlank) return;
+      const targetClean = activeBlank.cleanWord;
+      const nextCharIndex = dictationInput.length;
+      if (nextCharIndex < targetClean.length) {
+        setDictationInput(targetClean.slice(0, nextCharIndex + 1));
+      }
+    } else {
+      if (!targetDictationSentence) return;
+      const nextCharIndex = dictationInput.length;
+      if (nextCharIndex < targetDictationSentence.length) {
+        setDictationInput(targetDictationSentence.slice(0, nextCharIndex + 1));
+      }
+    }
+  };
+
+  const handleDictationReveal = () => {
+    setDictationRevealed(true);
+    if (dictationType === 'keywords') {
+      setFilledBlankIndices(keywordBlanks.map((_, i) => i));
     }
   };
 
@@ -829,46 +1135,84 @@ export function VideoStudyRoomPage() {
                     }}
                   >
                     {activeCue ? (
-                      <Stack gap={4} align="center">
-                        {/* Primary English Subtitle with clickable word tokens */}
-                        <Group justify="center" gap={4} wrap="wrap">
-                          {activeCue.text.split(/(\s+|[.,!?;:"'—–]+)/).map((token, idx) => {
-                            const isWord = /^[a-zA-Z0-9'-]+$/.test(token);
-                            if (!isWord) {
-                              return (
-                                <Text key={idx} component="span" c="white" fw={600} size="md">
-                                  {token}
-                                </Text>
-                              );
-                            }
-                            return (
-                              <Tooltip key={idx} label="Click to look up" withArrow position="top">
-                                <Text
-                                  component="span"
-                                  c="cyan.2"
-                                  fw={600}
-                                  size="md"
-                                  style={{
-                                    cursor: 'pointer',
-                                    borderBottom: '1px dashed #66d9e8',
-                                    transition: 'color 0.2s',
-                                  }}
-                                  onClick={() => handleWordClick(token, activeCue.text)}
-                                >
-                                  {token}
-                                </Text>
-                              </Tooltip>
-                            );
-                          })}
-                        </Group>
-
-                        {/* Secondary Vietnamese Translation */}
-                        {activeCue.translation && (
-                          <Text size="sm" c="dimmed" style={{ fontStyle: 'italic' }}>
-                            {activeCue.translation}
+                      activeTab === 'dictation' && !showDictationSubtitle ? (
+                        <Stack gap="xs" align="center" py="xs">
+                          <Group gap="xs">
+                            <IconHeadphones size={20} color="var(--mantine-color-blue-4)" />
+                            <Text fw={600} size="sm" c="blue.2">
+                              Dictation Mode Active (Subtitles Hidden)
+                            </Text>
+                          </Group>
+                          <Text size="xs" c="dimmed">
+                            Subtitles are hidden to test your listening. Fill in the blanks in the right panel!
                           </Text>
-                        )}
-                      </Stack>
+                          <Button
+                            data-testid="dictation-peek-btn"
+                            size="compact-xs"
+                            variant="subtle"
+                            color="cyan"
+                            leftSection={<IconEye size={13} />}
+                            onClick={() => setShowDictationSubtitle(true)}
+                          >
+                            Peek Subtitle
+                          </Button>
+                        </Stack>
+                      ) : (
+                        <Stack gap={4} align="center">
+                          {/* Primary English Subtitle with clickable word tokens */}
+                          <Group justify="center" gap={4} wrap="wrap">
+                            {activeCue.text.split(/(\s+|[.,!?;:"'—–]+)/).map((token, idx) => {
+                              const isWord = /^[a-zA-Z0-9'-]+$/.test(token);
+                              if (!isWord) {
+                                return (
+                                  <Text key={idx} component="span" c="white" fw={600} size="md">
+                                    {token}
+                                  </Text>
+                                );
+                              }
+                              return (
+                                <Tooltip key={idx} label="Click to look up" withArrow position="top">
+                                  <Text
+                                    component="span"
+                                    c="cyan.2"
+                                    fw={600}
+                                    size="md"
+                                    style={{
+                                      cursor: 'pointer',
+                                      borderBottom: '1px dashed #66d9e8',
+                                      transition: 'color 0.2s',
+                                    }}
+                                    onClick={() => handleWordClick(token, activeCue.text)}
+                                  >
+                                    {token}
+                                  </Text>
+                                </Tooltip>
+                              );
+                            })}
+                          </Group>
+
+                          {/* Secondary Vietnamese Translation */}
+                          {activeCue.translation && (
+                            <Text size="sm" c="dimmed" style={{ fontStyle: 'italic' }}>
+                              {activeCue.translation}
+                            </Text>
+                          )}
+
+                          {activeTab === 'dictation' && showDictationSubtitle && (
+                            <Button
+                              data-testid="dictation-hide-peek-btn"
+                              size="compact-xs"
+                              variant="subtle"
+                              color="gray"
+                              leftSection={<IconEyeOff size={13} />}
+                              onClick={() => setShowDictationSubtitle(false)}
+                              mt={4}
+                            >
+                              Hide Subtitle
+                            </Button>
+                          )}
+                        </Stack>
+                      )
                     ) : (
                       <Text size="sm" c="dimmed">
                         (Subtitles will display here as video plays)
@@ -1018,15 +1362,25 @@ export function VideoStudyRoomPage() {
                   {/* TAB 1: FULL SCRIPT */}
                   <Tabs.Panel value="script" pt="sm">
                     <Stack gap="sm">
-                      <TextInput
-                        placeholder="Search transcript..."
-                        size="xs"
-                        leftSection={<IconSearch size={14} />}
-                        value={scriptSearch}
-                        onChange={(e) => setScriptSearch(e.target.value)}
-                      />
+                      <Group justify="space-between" align="center" gap="xs">
+                        <TextInput
+                          placeholder="Search transcript..."
+                          size="xs"
+                          leftSection={<IconSearch size={14} />}
+                          value={scriptSearch}
+                          onChange={(e) => setScriptSearch(e.target.value)}
+                          style={{ flex: 1 }}
+                        />
+                        <Switch
+                          data-testid="auto-scroll-switch"
+                          size="xs"
+                          label="Auto-scroll"
+                          checked={autoScroll}
+                          onChange={(e) => setAutoScroll(e.currentTarget.checked)}
+                        />
+                      </Group>
 
-                      <ScrollArea h={480} offsetScrollbars>
+                      <ScrollArea viewportRef={scriptViewportRef} h={480} offsetScrollbars>
                         <Stack gap="xs">
                           {filteredSegments.map((segment) => {
                             const isActive = segment.index === currentCueIndex;
@@ -1075,14 +1429,33 @@ export function VideoStudyRoomPage() {
                   {/* TAB 2: DICTATION PRACTICE */}
                   <Tabs.Panel value="dictation" pt="sm">
                     <Stack gap="md">
-                      <Group justify="space-between">
+                      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
                         <Badge color="violet" variant="light">
                           Cue {currentCueIndex + 1} of {videoData.segments.length}
                         </Badge>
-                        <Text size="xs" c="dimmed">
-                          Auto-loops segment. Type what you hear!
-                        </Text>
+                        <SegmentedControl
+                          data-testid="dictation-mode-toggle"
+                          size="xs"
+                          value={dictationType}
+                          onChange={(val) => {
+                            setDictationType(val as 'keywords' | 'full');
+                            setDictationInput('');
+                            setFilledBlankIndices([]);
+                            setActiveBlankIndex(0);
+                            setDictationRevealed(false);
+                          }}
+                          data={[
+                            { label: '🎯 Đục lỗ ý chính', value: 'keywords' },
+                            { label: '📝 Toàn phần', value: 'full' },
+                          ]}
+                        />
                       </Group>
+
+                      <Text size="xs" c="dimmed">
+                        {dictationType === 'keywords'
+                          ? 'Đục lỗ các từ khóa chính. Nghe và điền từng từ còn thiếu vào chỗ trống!'
+                          : 'Đục lỗ toàn phần. Tự động lặp lại đoạn thoại, gõ toàn bộ câu bạn nghe được!'}
+                      </Text>
 
                       {/* Diff text display */}
                       <Paper p="md" radius="md" withBorder style={{ minHeight: '80px', backgroundColor: '#f8f9fa' }}>
@@ -1092,15 +1465,56 @@ export function VideoStudyRoomPage() {
                       {/* Typing input */}
                       <TextInput
                         data-testid="dictation-input"
-                        placeholder="Type sentence here..."
+                        placeholder={
+                          dictationType === 'keywords'
+                            ? activeBlank
+                              ? `Điền từ còn thiếu vào chỗ trống #${activeBlankIndex + 1} (${activeBlank.cleanWord.length} chữ cái)... Nhấn Enter để kiểm tra`
+                              : '🎉 Đã hoàn thành tất cả chỗ trống trong câu!'
+                            : 'Gõ toàn bộ câu thoại bạn nghe được... Nhấn Enter để kiểm tra'
+                        }
                         value={dictationInput}
                         onChange={(e) => handleDictationInputChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCheckDictation();
+                          }
+                        }}
                         autoFocus
+                        disabled={dictationType === 'keywords' && filledBlankIndices.length >= keywordBlanks.length}
                       />
 
+                      {/* Feedback banner */}
+                      {dictationFeedback && (
+                        <Alert
+                          data-testid="dictation-feedback-alert"
+                          color={dictationFeedback.type === 'success' ? 'green' : 'red'}
+                          icon={dictationFeedback.type === 'success' ? <IconCheck size={16} /> : <IconX size={16} />}
+                          py={6}
+                          px="sm"
+                          withCloseButton
+                          onClose={() => setDictationFeedback(null)}
+                        >
+                          <Text size="xs" fw={600}>
+                            {dictationFeedback.message}
+                          </Text>
+                        </Alert>
+                      )}
+
                       {/* Dictation action buttons */}
-                      <Group justify="space-between">
+                      <Group justify="space-between" wrap="wrap" gap="xs">
                         <Group gap="xs">
+                          <Button
+                            data-testid="dictation-check-btn"
+                            size="xs"
+                            color="blue"
+                            variant="filled"
+                            leftSection={<IconCheck size={14} />}
+                            onClick={handleCheckDictation}
+                            disabled={dictationType === 'keywords' && filledBlankIndices.length >= keywordBlanks.length}
+                          >
+                            Kiểm tra (Enter)
+                          </Button>
                           <Button
                             data-testid="dictation-hint-btn"
                             size="xs"
@@ -1117,7 +1531,7 @@ export function VideoStudyRoomPage() {
                             variant="subtle"
                             color="gray"
                             leftSection={<IconEye size={14} />}
-                            onClick={() => setDictationRevealed(true)}
+                            onClick={handleDictationReveal}
                           >
                             Reveal
                           </Button>

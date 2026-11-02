@@ -215,4 +215,38 @@ describe('VideoStudyRoomPage', () => {
 
     expect(screen.getByRole('button', { name: /Save to Vocabulary Bank/i })).toBeInTheDocument();
   });
+
+  it('hides subtitles in Dictation Mode to avoid leaks and toggles between keywords and full modes', async () => {
+    vi.mocked(videoApi.getTranscript).mockResolvedValue(mockTranscript);
+
+    renderComponent();
+
+    fireEvent.click(screen.getByTestId('sample-video-btn-0'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dictation-tab')).toBeInTheDocument();
+    });
+
+    // Switch to Dictation tab
+    fireEvent.click(screen.getByTestId('dictation-tab'));
+
+    // Subtitle overlay should be hidden with peek button
+    expect(screen.getByText(/Dictation Mode Active \(Subtitles Hidden\)/i)).toBeInTheDocument();
+    expect(screen.getByTestId('dictation-peek-btn')).toBeInTheDocument();
+
+    // Click peek button
+    fireEvent.click(screen.getByTestId('dictation-peek-btn'));
+    expect(screen.getByTestId('dictation-hide-peek-btn')).toBeInTheDocument();
+
+    // Toggle between Key Words and Full mode
+    expect(screen.getByTestId('dictation-mode-toggle')).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Toàn phần/i));
+    expect(screen.getByText(/Đục lỗ toàn phần/i)).toBeInTheDocument();
+
+    // Check submit flow in Full mode
+    const input = screen.getByTestId('dictation-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'random wrong text' } });
+    fireEvent.click(screen.getByTestId('dictation-check-btn'));
+    expect(screen.getByTestId('dictation-feedback-alert')).toBeInTheDocument();
+  });
 });

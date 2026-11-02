@@ -7,66 +7,7 @@ import {
   VideoTranscript,
 } from './schemas/video-transcript.schema.js';
 
-const CURATED_TRANSCRIPTS: Record<
-  string,
-  { videoTitle: string; durationSeconds: number; segments: TranscriptSegment[] }
-> = {
-  'UF8uR6Z6KLc': {
-    videoTitle: "Steve Jobs' 2005 Stanford Commencement Address",
-    durationSeconds: 905,
-    segments: [
-      {
-        index: 0,
-        startSeconds: 24.5,
-        endSeconds: 34.0,
-        text: 'Thank you. I am honored to be with you today at your commencement from one of the finest universities in the world.',
-        translation: 'Cảm ơn các bạn. Tôi rất vinh dự được có mặt cùng các bạn hôm nay tại lễ tốt nghiệp từ một trong những trường đại học tốt nhất trên thế giới.',
-      },
-      {
-        index: 1,
-        startSeconds: 34.5,
-        endSeconds: 45.0,
-        text: 'I never graduated from college. Truth be told, this is the closest I have ever gotten to a college graduation.',
-        translation: 'Tôi chưa từng tốt nghiệp đại học. Sự thật là đây là lần gần nhất tôi được dự một lễ tốt nghiệp đại học.',
-      },
-      {
-        index: 2,
-        startSeconds: 45.5,
-        endSeconds: 56.5,
-        text: 'Today I want to tell you three stories from my life. That is it. No big deal. Just three stories.',
-        translation: 'Hôm nay tôi muốn kể cho các bạn ba câu chuyện từ cuộc đời tôi. Chỉ thế thôi. Không có gì to tát. Chỉ ba câu chuyện.',
-      },
-      {
-        index: 3,
-        startSeconds: 57.0,
-        endSeconds: 64.5,
-        text: 'The first story is about connecting the dots.',
-        translation: 'Câu chuyện đầu tiên là về việc kết nối các dấu mốc.',
-      },
-      {
-        index: 4,
-        startSeconds: 65.0,
-        endSeconds: 77.0,
-        text: 'I dropped out of Reed College after the first 6 months, but then stayed around as a drop-in for another 18 months or so before I really quit.',
-        translation: 'Tôi đã bỏ học ở Cao đẳng Reed sau 6 tháng đầu tiên, nhưng sau đó vẫn ở lại dự thính thêm khoảng 18 tháng trước khi thực sự nghỉ hẳn.',
-      },
-      {
-        index: 5,
-        startSeconds: 77.5,
-        endSeconds: 81.5,
-        text: 'So why did I drop out?',
-        translation: 'Vậy tại sao tôi lại bỏ học?',
-      },
-      {
-        index: 6,
-        startSeconds: 82.0,
-        endSeconds: 94.0,
-        text: 'It started before I was born. My biological mother was a young, unwed college graduate student, and she decided to put me up for adoption.',
-        translation: 'Mọi chuyện bắt đầu từ trước khi tôi ra đời. Mẹ đẻ của tôi là một nữ sinh viên tốt nghiệp đại học trẻ tuổi, chưa kết hôn, và bà quyết định cho tôi làm con nuôi.',
-      },
-    ],
-  },
-};
+const INNERTUBE_CLIENT_VERSION = '20.10.38';
 
 @Injectable()
 export class VideoService {
@@ -115,7 +56,7 @@ export class VideoService {
       .findOne({ provider: 'youtube', videoId, language })
       .lean();
 
-    if (cached) {
+    if (cached && cached.segments && cached.segments.length > 0) {
       return {
         videoId: cached.videoId,
         provider: cached.provider,
@@ -125,10 +66,126 @@ export class VideoService {
       };
     }
 
-    // 2. Fetch YouTube watch page
-    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    let pageHtml = '';
+    // 2. Fetch real live transcript via YouTube InnerTube API (Android Client)
+    const liveData = await this.fetchViaInnerTube(videoId, language);
+    if (liveData && liveData.segments.length > 0) {
+      const saved = await this.videoTranscriptModel.findOneAndUpdate(
+        { provider: 'youtube', videoId, language },
+        {
+          provider: 'youtube',
+          videoId,
+          language,
+          videoTitle: liveData.videoTitle,
+          durationSeconds: liveData.durationSeconds,
+          segments: liveData.segments,
+        },
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+      );
+
+      return {
+        videoId: saved?.videoId || videoId,
+        provider: saved?.provider || 'youtube',
+        videoTitle: saved?.videoTitle || liveData.videoTitle,
+        durationSeconds: saved?.durationSeconds || liveData.durationSeconds,
+        segments: saved?.segments || liveData.segments,
+      };
+    }
+
+    // 3. Fallback: Fetch via YouTube Watch page HTML (web scrape)
+    const webData = await this.fetchViaWebScrape(videoId, language);
+    if (webData && webData.segments.length > 0) {
+      const saved = await this.videoTranscriptModel.findOneAndUpdate(
+        { provider: 'youtube', videoId, language },
+        {
+          provider: 'youtube',
+          videoId,
+          language,
+          videoTitle: webData.videoTitle,
+          durationSeconds: webData.durationSeconds,
+          segments: webData.segments,
+        },
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+      );
+
+      return {
+        videoId: saved?.videoId || videoId,
+        provider: saved?.provider || 'youtube',
+        videoTitle: saved?.videoTitle || webData.videoTitle,
+        durationSeconds: saved?.durationSeconds || webData.durationSeconds,
+        segments: saved?.segments || webData.segments,
+      };
+    }
+
+    throw new NotFoundException('Subtitles track contained no readable dialogue segments.');
+  }
+
+  /**
+   * Fetches the authentic YouTube transcript using official InnerTube Android player API
+   */
+  private async fetchViaInnerTube(
+    videoId: string,
+    language: string,
+  ): Promise<{ videoTitle: string; durationSeconds: number; segments: TranscriptSegment[] } | null> {
     try {
+      const resp = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': `com.google.android.youtube/${INNERTUBE_CLIENT_VERSION} (Linux; U; Android 14)`,
+        },
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: 'ANDROID',
+              clientVersion: INNERTUBE_CLIENT_VERSION,
+            },
+          },
+          videoId,
+        }),
+      });
+
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      const captionTracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) {
+        return null;
+      }
+
+      const videoTitle = data?.videoDetails?.title || 'YouTube Video';
+      const durationSeconds = parseInt(data?.videoDetails?.lengthSeconds, 10) || 0;
+
+      const track =
+        captionTracks.find((t: any) => t.languageCode?.toLowerCase() === language && !t.vssId?.includes('asr')) ||
+        captionTracks.find((t: any) => t.languageCode?.toLowerCase()?.startsWith(language)) ||
+        captionTracks[0];
+
+      const subRes = await fetch(track.baseUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
+        },
+      });
+
+      if (!subRes.ok) return null;
+      const subXml = await subRes.text();
+      if (!subXml || subXml.length === 0) return null;
+
+      const segments = this.parseXmlSubtitles(subXml);
+      return { videoTitle, durationSeconds, segments };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Fallback scraper from watch page
+   */
+  private async fetchViaWebScrape(
+    videoId: string,
+    language: string,
+  ): Promise<{ videoTitle: string; durationSeconds: number; segments: TranscriptSegment[] } | null> {
+    try {
+      const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const response = await fetch(watchUrl, {
         headers: {
           'User-Agent':
@@ -136,58 +193,39 @@ export class VideoService {
           'Accept-Language': 'en-US,en;q=0.9',
         },
       });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) return null;
+      const pageHtml = await response.text();
+
+      const playerResponseMatch =
+        pageHtml.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var\s|let\s|const\s|<\/script>)/s) ||
+        pageHtml.match(/ytInitialPlayerResponse\s*=\s*({.+?});/s);
+
+      if (!playerResponseMatch) return null;
+
+      const playerResponse = JSON.parse(playerResponseMatch[1]);
+      const videoTitle = playerResponse?.videoDetails?.title || 'YouTube Video';
+      const durationSeconds = parseInt(playerResponse?.videoDetails?.lengthSeconds, 10) || 0;
+
+      const captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) {
+        return null;
       }
-      pageHtml = await response.text();
-    } catch (err: any) {
-      throw new BadRequestException(`Unable to fetch YouTube video: ${err.message}`);
-    }
 
-    // 3. Extract player response JSON
-    const playerResponseMatch =
-      pageHtml.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var\s|let\s|const\s|<\/script>)/s) ||
-      pageHtml.match(/ytInitialPlayerResponse\s*=\s*({.+?});/s);
+      const selectedTrack =
+        captionTracks.find((t: any) => t.languageCode?.toLowerCase() === language) ||
+        captionTracks.find((t: any) => t.languageCode?.toLowerCase()?.startsWith(language)) ||
+        captionTracks[0];
 
-    if (!playerResponseMatch) {
-      throw new NotFoundException('Could not parse YouTube player metadata.');
-    }
-
-    let playerResponse: any;
-    try {
-      playerResponse = JSON.parse(playerResponseMatch[1]);
-    } catch {
-      throw new NotFoundException('Invalid player metadata format.');
-    }
-
-    let videoTitle =
-      playerResponse?.videoDetails?.title || 'YouTube Video';
-    let durationSeconds =
-      parseInt(playerResponse?.videoDetails?.lengthSeconds, 10) || 0;
-
-    const captionTracks =
-      playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-
-    if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) {
-      throw new NotFoundException('No subtitles found for this video.');
-    }
-
-    // 4. Select matching track
-    const selectedTrack =
-      captionTracks.find((t: any) => t.languageCode?.toLowerCase() === language) ||
-      captionTracks.find((t: any) => t.languageCode?.toLowerCase()?.startsWith(language)) ||
-      captionTracks[0];
-
-    const subtitleUrl = selectedTrack.baseUrl.includes('fmt=json3')
-      ? selectedTrack.baseUrl
-      : `${selectedTrack.baseUrl}&fmt=json3`;
-
-    let segments: TranscriptSegment[] = [];
-
-    try {
-      const subResponse = await fetch(subtitleUrl);
+      const subResponse = await fetch(selectedTrack.baseUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
+        },
+      });
+      if (!subResponse.ok) return null;
       const subDataText = await subResponse.text();
 
+      let segments: TranscriptSegment[] = [];
       try {
         const json3 = JSON.parse(subDataText);
         if (json3.events && Array.isArray(json3.events)) {
@@ -215,61 +253,46 @@ export class VideoService {
           }
         }
       } catch {
-        // Fallback: Parse XML format if response was XML
+        // Fallback to XML
         segments = this.parseXmlSubtitles(subDataText);
       }
-    } catch (err: any) {
-      throw new BadRequestException(`Failed to retrieve subtitle stream: ${err.message}`);
-    }
 
-    if (segments.length === 0) {
-      const curated = CURATED_TRANSCRIPTS[videoId];
-      if (curated) {
-        segments = curated.segments;
-        if (!videoTitle || videoTitle === 'YouTube Video') {
-          videoTitle = curated.videoTitle;
-        }
-        if (!durationSeconds) {
-          durationSeconds = curated.durationSeconds;
-        }
-      } else {
-        throw new NotFoundException('Subtitles track contained no readable dialogue segments.');
+      if (segments.length === 0) {
+        segments = this.parseXmlSubtitles(subDataText);
       }
+
+      return { videoTitle, durationSeconds, segments };
+    } catch {
+      return null;
     }
-
-    // 5. Cache transcript in DB
-    const saved = await this.videoTranscriptModel.findOneAndUpdate(
-      { provider: 'youtube', videoId, language },
-      {
-        provider: 'youtube',
-        videoId,
-        language,
-        videoTitle,
-        durationSeconds,
-        segments,
-      },
-      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-    );
-
-    return {
-      videoId: saved.videoId,
-      provider: saved.provider,
-      videoTitle: saved.videoTitle,
-      durationSeconds: saved.durationSeconds,
-      segments: saved.segments,
-    };
   }
 
   private parseXmlSubtitles(xml: string): TranscriptSegment[] {
     const segments: TranscriptSegment[] = [];
-    const regex = /<text\s+start="([0-9.]+)"\s+dur="([0-9.]+)"[^>]*>(.*?)<\/text>/gi;
-    let match: RegExpExecArray | null;
+    const regex =
+      /<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>|<text\s+start="([\d\.]+)"\s+dur="([\d\.]+)"[^>]*>([\s\S]*?)<\/text>/gi;
+    let m: RegExpExecArray | null;
     let index = 0;
 
-    while ((match = regex.exec(xml)) !== null) {
-      const startSeconds = parseFloat(match[1]);
-      const dur = parseFloat(match[2]);
-      const rawText = match[3]
+    while ((m = regex.exec(xml)) !== null) {
+      let startSeconds: number;
+      let endSeconds: number;
+      let rawText: string;
+
+      if (m[1] !== undefined) {
+        startSeconds = Number((parseInt(m[1], 10) / 1000).toFixed(2));
+        const dur = parseInt(m[2], 10) / 1000;
+        endSeconds = Number((startSeconds + dur).toFixed(2));
+        rawText = m[3];
+      } else {
+        startSeconds = Number(parseFloat(m[4]).toFixed(2));
+        const dur = parseFloat(m[5]) || 0;
+        endSeconds = Number((startSeconds + dur).toFixed(2));
+        rawText = m[6];
+      }
+
+      const text = rawText
+        .replace(/<[^>]+>/g, '')
         .replace(/&amp;/g, '&')
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'")
@@ -278,12 +301,12 @@ export class VideoService {
         .replace(/\n+/g, ' ')
         .trim();
 
-      if (rawText) {
+      if (text) {
         segments.push({
           index: index++,
-          startSeconds: Number(startSeconds.toFixed(2)),
-          endSeconds: Number((startSeconds + dur).toFixed(2)),
-          text: rawText,
+          startSeconds,
+          endSeconds,
+          text,
           translation: null,
         });
       }
