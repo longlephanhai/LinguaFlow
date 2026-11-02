@@ -68,6 +68,12 @@ describe('ReviewController (e2e)', () => {
             sentence: 'The beauty of a sunset is ephemeral.',
             meaning: 'Phù du, chóng tàn',
             partOfSpeech: 'adjective',
+            mediaMetadata: {
+              provider: 'youtube',
+              videoId: 'dQw4w9WgXcQ',
+              timestampSeconds: 102,
+              videoTitle: 'English Lesson',
+            },
           },
         ],
       });
@@ -79,6 +85,12 @@ describe('ReviewController (e2e)', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.occurrences).toHaveLength(1);
       expect(response.body.data.occurrences[0].lemma).toBe('ephemeral');
+      expect(response.body.data.occurrences[0].mediaMetadata).toEqual({
+        provider: 'youtube',
+        videoId: 'dQw4w9WgXcQ',
+        timestampSeconds: 102,
+        videoTitle: 'English Lesson',
+      });
       expect(mockReviewService.getDueOccurrences).toHaveBeenCalledWith('user-review-e2e');
     });
   });

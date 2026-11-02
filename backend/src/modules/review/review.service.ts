@@ -56,6 +56,15 @@ export class ReviewService {
         example: meaning?.example ?? '',
         sourceUrl: occ.sourceUrl,
         sourceTitle: occ.sourceTitle,
+        mediaMetadata: occ.mediaMetadata
+          ? {
+              provider: occ.mediaMetadata.provider ?? null,
+              videoId: occ.mediaMetadata.videoId ?? null,
+              timestampSeconds: occ.mediaMetadata.timestampSeconds ?? null,
+              videoTitle: occ.mediaMetadata.videoTitle ?? null,
+              audioSnippetUrl: occ.mediaMetadata.audioSnippetUrl ?? null,
+            }
+          : null,
         review: {
           easeFactor: occ.review?.easeFactor ?? 2.5,
           intervalDays: occ.review?.intervalDays ?? 1,

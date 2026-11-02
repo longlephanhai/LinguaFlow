@@ -25,14 +25,26 @@ import {
   IconExternalLink,
   IconRefresh,
   IconPlayerPause,
+  IconPlayerPlay,
+  IconVideo,
 } from '@tabler/icons-react';
 import { reviewApi, type DueOccurrence } from '../lib/review.api';
+
+function formatClipTime(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return '0:00';
+  const totalSec = Math.max(0, Math.floor(seconds));
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 export function FlashcardPage() {
   const navigate = useNavigate();
   const [cards, setCards] = useState<DueOccurrence[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showClip, setShowClip] = useState(false);
+  const [clipReplayKey, setClipReplayKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +60,7 @@ export function FlashcardPage() {
       setCards(response.occurrences || []);
       setCurrentIndex(0);
       setIsFlipped(false);
+      setShowClip(false);
       setSessionCompleted(false);
     } catch (err: any) {
       setError(err?.response?.data?.error?.message || err?.message || 'Failed to load due cards');
@@ -83,6 +96,7 @@ export function FlashcardPage() {
       );
 
       setIsFlipped(false);
+      setShowClip(false);
       if (currentIndex + 1 < totalCards) {
         setCurrentIndex((prev) => prev + 1);
       } else {
@@ -102,6 +116,7 @@ export function FlashcardPage() {
     try {
       await reviewApi.suspendCard(currentCard.id, true);
       setIsFlipped(false);
+      setShowClip(false);
       if (currentIndex + 1 < totalCards) {
         setCurrentIndex((prev) => prev + 1);
       } else {
@@ -295,6 +310,102 @@ export function FlashcardPage() {
                   <Text size="sm" fs="italic" c="dimmed">
                     "{currentCard.example}"
                   </Text>
+                </Box>
+              )}
+
+              {/* FR-CARD-001: Video Context Clip Playback on Card Back */}
+              {currentCard.mediaMetadata?.provider === 'youtube' && currentCard.mediaMetadata?.videoId && (
+                <Box
+                  mt="xs"
+                  p="sm"
+                  style={{
+                    backgroundColor: 'var(--mantine-color-indigo-0)',
+                    border: '1px solid var(--mantine-color-indigo-2)',
+                    borderRadius: '10px',
+                    width: '100%',
+                  }}
+                >
+                  <Group justify="space-between" mb={showClip ? 'xs' : 0}>
+                    <Group gap="xs">
+                      <IconVideo size="1rem" color="var(--mantine-color-indigo-6)" />
+                      <Text size="xs" fw={600} c="indigo.9" lineClamp={1}>
+                        {currentCard.mediaMetadata.videoTitle || 'Video Context'}
+                      </Text>
+                      {currentCard.mediaMetadata.timestampSeconds !== null && (
+                        <Badge size="xs" variant="light" color="indigo">
+                          {formatClipTime(currentCard.mediaMetadata.timestampSeconds)}
+                        </Badge>
+                      )}
+                    </Group>
+
+                    {!showClip ? (
+                      <Button
+                        size="xs"
+                        variant="filled"
+                        color="indigo"
+                        radius="md"
+                        leftSection={<IconPlayerPlay size="0.85rem" />}
+                        onClick={() => {
+                          setShowClip(true);
+                          setClipReplayKey((prev) => prev + 1);
+                        }}
+                      >
+                        Play Context Clip
+                      </Button>
+                    ) : (
+                      <Group gap="xs">
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="indigo"
+                          radius="md"
+                          leftSection={<IconRefresh size="0.85rem" />}
+                          onClick={() => setClipReplayKey((prev) => prev + 1)}
+                        >
+                          Replay Clip
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          color="gray"
+                          radius="md"
+                          onClick={() => setShowClip(false)}
+                        >
+                          Close Clip
+                        </Button>
+                      </Group>
+                    )}
+                  </Group>
+
+                  {showClip && (
+                    <Box
+                      style={{
+                        position: 'relative',
+                        width: '100%',
+                        paddingTop: '56.25%',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        backgroundColor: '#000',
+                      }}
+                    >
+                      <iframe
+                        key={`${currentCard.id}-${clipReplayKey}`}
+                        data-testid="context-clip-iframe"
+                        title="Context Video Clip"
+                        src={`https://www.youtube-nocookie.com/embed/${currentCard.mediaMetadata.videoId}?start=${Math.max(0, Math.floor((currentCard.mediaMetadata.timestampSeconds ?? 0) - 2))}&end=${Math.ceil((currentCard.mediaMetadata.timestampSeconds ?? 0) + 3)}&autoplay=1&rel=0`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          border: 0,
+                        }}
+                      />
+                    </Box>
+                  )}
                 </Box>
               )}
             </Stack>

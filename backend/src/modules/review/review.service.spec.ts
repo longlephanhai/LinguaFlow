@@ -92,6 +92,67 @@ describe('ReviewService', () => {
         partOfSpeech: 'adjective',
         meaning: 'Present everywhere',
         sentence: 'Smartphones are ubiquitous.',
+        mediaMetadata: null,
+      });
+    });
+
+    it('should include mediaMetadata when present on due occurrence', async () => {
+      mockUserModel.findById.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue({
+            settings: { dailyReviewGoal: 20 },
+          }),
+        }),
+      });
+
+      const mockOccurrences = [
+        {
+          _id: new Types.ObjectId(occurrenceId),
+          selectedText: 'serendipity',
+          sentence: 'Finding that old book was pure serendipity.',
+          sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s',
+          sourceTitle: 'TED Talk',
+          mediaMetadata: {
+            provider: 'youtube',
+            videoId: 'dQw4w9WgXcQ',
+            timestampSeconds: 42,
+            videoTitle: 'TED Talk',
+            audioSnippetUrl: null,
+          },
+          vocabularyItemId: {
+            lemma: 'serendipity',
+            partOfSpeech: 'noun',
+          },
+          meaningId: {
+            definition: 'The occurrence of events by chance in a happy way',
+            example: 'A fortunate stroke of serendipity.',
+          },
+          review: {
+            easeFactor: 2.5,
+            intervalDays: 1,
+            repetitions: 1,
+            dueDate: new Date('2026-10-25T00:00:00.000Z'),
+          },
+        },
+      ];
+
+      const execMock = vi.fn().mockResolvedValue(mockOccurrences);
+      const populateMeaning = vi.fn().mockReturnValue({ exec: execMock });
+      const populateVocab = vi.fn().mockReturnValue({ populate: populateMeaning });
+      const limitMock = vi.fn().mockReturnValue({ populate: populateVocab });
+      const sortMock = vi.fn().mockReturnValue({ limit: limitMock });
+
+      mockOccurrenceModel.find.mockReturnValue({ sort: sortMock });
+
+      const result = await service.getDueOccurrences(userId);
+
+      expect(result.occurrences).toHaveLength(1);
+      expect(result.occurrences[0].mediaMetadata).toEqual({
+        provider: 'youtube',
+        videoId: 'dQw4w9WgXcQ',
+        timestampSeconds: 42,
+        videoTitle: 'TED Talk',
+        audioSnippetUrl: null,
       });
     });
   });

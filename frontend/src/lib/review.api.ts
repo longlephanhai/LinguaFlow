@@ -1,5 +1,13 @@
 import { api } from './api';
 
+export interface MediaMetadata {
+  provider: 'youtube' | 'netflix' | 'web' | null;
+  videoId: string | null;
+  timestampSeconds: number | null;
+  videoTitle: string | null;
+  audioSnippetUrl?: string | null;
+}
+
 export interface DueOccurrence {
   id: string;
   occurrenceId: string;
@@ -12,6 +20,7 @@ export interface DueOccurrence {
   example: string;
   sourceUrl: string;
   sourceTitle: string | null;
+  mediaMetadata?: MediaMetadata | null;
   review?: {
     easeFactor: number;
     intervalDays: number;

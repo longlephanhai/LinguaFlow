@@ -69,7 +69,7 @@ Request: `{ "sentence"?: "...", "meaning"?: "..." }` → `{ "success": true }`
 ## Review
 
 **`GET /review/due`**
-Response: `{ "occurrences": [{ "id": "...", "lemma": "scale", "partOfSpeech": "verb", "selectedText": "scaling", "sentence": "...", "meaning": "...", "example": "...", "sourceUrl": "...", "sourceTitle": "..." }] }`
+Response: `{ "occurrences": [{ "id": "...", "lemma": "scale", "partOfSpeech": "verb", "selectedText": "scaling", "sentence": "...", "meaning": "...", "example": "...", "sourceUrl": "...", "sourceTitle": "...", "mediaMetadata": { "provider": "youtube", "videoId": "...", "timestampSeconds": 102, "videoTitle": "..." } | null }] }`
 
 **`POST /review/:occurrenceId/result`**
 Request: `{ "remembered": true }`
