@@ -22,3 +22,4 @@ export const dictationApi = {
     return api.post('/dictation/sessions', payload) as unknown as Promise<RecordDictationSessionResponse>;
   },
 };
+

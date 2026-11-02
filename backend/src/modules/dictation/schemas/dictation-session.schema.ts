@@ -32,3 +32,4 @@ export class DictationSession {
 
 export const DictationSessionSchema = SchemaFactory.createForClass(DictationSession);
 DictationSessionSchema.index({ userId: 1, createdAt: -1 });
+

@@ -35,3 +35,4 @@ describe('DictationController', () => {
     expect(mockDictationService.recordSession).toHaveBeenCalledWith('507f1f77bcf86cd799439011', dto);
   });
 });
+

@@ -28,3 +28,4 @@ export const shadowingApi = {
     return api.post('/shadowing/evaluate', payload) as unknown as Promise<EvaluateShadowingResponse>;
   },
 };
+

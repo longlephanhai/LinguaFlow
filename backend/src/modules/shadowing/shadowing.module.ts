@@ -20,3 +20,4 @@ import { ShadowingService } from './shadowing.service.js';
   exports: [ShadowingService],
 })
 export class ShadowingModule {}
+

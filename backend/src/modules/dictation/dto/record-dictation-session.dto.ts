@@ -26,3 +26,4 @@ export class RecordDictationSessionDto {
   @Min(0)
   mistakesCount!: number;
 }
+

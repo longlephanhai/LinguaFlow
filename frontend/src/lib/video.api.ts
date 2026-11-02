@@ -26,3 +26,4 @@ export const videoApi = {
     return api.post('/video/transcript', payload) as unknown as Promise<VideoTranscriptData>;
   },
 };
+
