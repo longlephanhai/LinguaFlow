@@ -510,6 +510,15 @@ function setupNativeCaptionObserver() {
     document.body;
 
   captionObserver = new MutationObserver(() => {
+    // If YouTube CC is disabled, clear subtitle and do not show anything
+    if (!isYouTubeCCEnabled()) {
+      if (lastObservedCaptionText) {
+        lastObservedCaptionText = '';
+        renderSubtitleText('');
+      }
+      return;
+    }
+
     // If backend segments are actively controlling cues, let them drive
     if (ytSegments.length > 0 && ytActiveSegment) return;
 
@@ -537,42 +546,21 @@ function setupNativeCaptionObserver() {
   });
 }
 
-function checkYouTubeSubtitlesButton() {
-  if (!isYouTubeWatchPage()) return;
-
+export function isYouTubeCCEnabled(): boolean {
+  if (typeof document === 'undefined') return false;
   const ccBtn = document.querySelector<HTMLButtonElement>('.ytp-subtitles-button');
-  if (!ccBtn) return;
+  return ccBtn ? ccBtn.getAttribute('aria-pressed') === 'true' : false;
+}
 
-  const isPressed = ccBtn.getAttribute('aria-pressed') === 'true';
-  const banner = document.getElementById('lf-yt-cc-prompt');
-
-  if (!isPressed) {
-    if (!banner) {
-      const prompt = document.createElement('div');
-      prompt.id = 'lf-yt-cc-prompt';
-      prompt.innerHTML = `
-        <span class="lf-yt-cc-icon">💬</span>
-        <span>LinguaFlow: Bật CC để hiện phụ đề tra từ</span>
-        <button class="lf-yt-cc-btn">Bật phụ đề</button>
-      `;
-      prompt.querySelector('.lf-yt-cc-btn')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        ccBtn.click();
-        prompt.remove();
-      });
-
-      const player =
-        document.getElementById('movie_player') ||
-        document.querySelector('.html5-video-player') ||
-        document.body;
-      player.appendChild(prompt);
+function onCCStateToggle() {
+  setTimeout(() => {
+    if (!isYouTubeCCEnabled()) {
+      ytActiveSegment = null;
+      renderSubtitleCue(null);
+    } else {
+      onTimeUpdate();
     }
-  } else {
-    if (banner) {
-      banner.remove();
-    }
-  }
+  }, 60);
 }
 
 function tryExtractBrowserCaptionTracks() {
@@ -666,13 +654,30 @@ function setupYouTubeVideoListeners() {
   video.removeEventListener('timeupdate', onTimeUpdate);
   video.addEventListener('timeupdate', onTimeUpdate);
 
+  const ccBtn = document.querySelector<HTMLButtonElement>('.ytp-subtitles-button');
+  if (ccBtn) {
+    ccBtn.removeEventListener('click', onCCStateToggle);
+    ccBtn.addEventListener('click', onCCStateToggle);
+  }
+
   setupNativeCaptionObserver();
-  checkYouTubeSubtitlesButton();
+  document.getElementById('lf-yt-cc-prompt')?.remove();
 }
 
 function onTimeUpdate() {
   const video = getYouTubeVideoElement();
-  if (!video || ytSegments.length === 0) return;
+  if (!video) return;
+
+  // Respect YouTube native CC state: only display subtitles when CC is enabled
+  if (!isYouTubeCCEnabled()) {
+    if (ytActiveSegment !== null) {
+      ytActiveSegment = null;
+      renderSubtitleCue(null);
+    }
+    return;
+  }
+
+  if (ytSegments.length === 0) return;
 
   const currentTime = video.currentTime;
   const currentSegment = ytSegments.find(
@@ -704,7 +709,9 @@ if (typeof document !== 'undefined') {
 
     const key = e.key.toLowerCase();
 
-    if (key === 'a') {
+    if (key === 'c') {
+      onCCStateToggle();
+    } else if (key === 'a') {
       // Rewind 3 seconds
       e.preventDefault();
       video.currentTime = Math.max(0, video.currentTime - 3);
@@ -749,7 +756,7 @@ if (typeof window !== 'undefined') {
         fetchTranscriptForCurrentVideo();
         setupYouTubeVideoListeners();
       } else {
-        checkYouTubeSubtitlesButton();
+        document.getElementById('lf-yt-cc-prompt')?.remove();
         if (!captionObserver) {
           setupNativeCaptionObserver();
         }

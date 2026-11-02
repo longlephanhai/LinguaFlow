@@ -4,6 +4,7 @@ import {
   tokenizeSubtitleSentence,
   isYouTubeWatchPage,
   getYouTubeVideoId,
+  isYouTubeCCEnabled,
 } from './content.js';
 
 describe('Extension Content Script - Context Extraction', () => {
@@ -83,5 +84,39 @@ describe('Extension Content Script - YouTube URL Detection', () => {
     expect(getYouTubeVideoId()).toBe('dQw4w9WgXcQ');
 
     delete (globalThis as any).window;
+  });
+});
+
+describe('Extension Content Script - YouTube CC State', () => {
+  it('returns false when document is undefined or cc button is absent', () => {
+    expect(isYouTubeCCEnabled()).toBe(false);
+  });
+
+  it('detects aria-pressed true on cc button correctly', () => {
+    const fakeBtn = {
+      getAttribute: (attr: string) => (attr === 'aria-pressed' ? 'true' : null),
+    };
+    (globalThis as any).document = {
+      querySelector: (selector: string) =>
+        selector === '.ytp-subtitles-button' ? fakeBtn : null,
+    };
+
+    expect(isYouTubeCCEnabled()).toBe(true);
+
+    delete (globalThis as any).document;
+  });
+
+  it('detects aria-pressed false on cc button correctly', () => {
+    const fakeBtn = {
+      getAttribute: (attr: string) => (attr === 'aria-pressed' ? 'false' : null),
+    };
+    (globalThis as any).document = {
+      querySelector: (selector: string) =>
+        selector === '.ytp-subtitles-button' ? fakeBtn : null,
+    };
+
+    expect(isYouTubeCCEnabled()).toBe(false);
+
+    delete (globalThis as any).document;
   });
 });

@@ -190,44 +190,6 @@
 /* ========================================================
    Phase 2: YouTube Subtitle Overlay & Interactive Player
    ======================================================== */
-#lf-yt-cc-prompt {
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #f8fafc;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-  font-size: 13px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 2147483645;
-  animation: lf-fade-in 0.2s ease-out;
-  pointer-events: auto;
-}
-
-.lf-yt-cc-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 4px 10px;
-  border-radius: 5px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.lf-yt-cc-btn:hover {
-  background: #1d4ed8;
-}
-
 /* Hide default raw unclickable YouTube caption window when LinguaFlow is active */
 .ytp-caption-window-bottom,
 .caption-window {
