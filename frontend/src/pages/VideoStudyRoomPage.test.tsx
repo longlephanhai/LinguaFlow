@@ -177,6 +177,9 @@ describe('VideoStudyRoomPage', () => {
 
     expect(screen.getByTestId('shadowing-listen-btn')).toBeInTheDocument();
     expect(screen.getByTestId('shadowing-record-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('smart-shadow-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('shadowing-speed-control')).toBeInTheDocument();
+    expect(screen.getByTestId('shadowing-autopause-switch')).toBeInTheDocument();
 
     // Click listen native
     fireEvent.click(screen.getByTestId('shadowing-listen-btn'));
@@ -187,7 +190,14 @@ describe('VideoStudyRoomPage', () => {
     // Directly trigger evaluation
     await waitFor(() => {
       expect(screen.getByText(/Target Sentence:/i)).toBeInTheDocument();
+      // Ensure it stays on cue 0 and does not jump
+      expect(screen.getAllByText('I am honored to be with you today.').length).toBeGreaterThanOrEqual(1);
     });
+
+    // Test moving to next sentence via next cue button
+    const nextCueBtn = screen.getByTitle('Next sentence');
+    fireEvent.click(nextCueBtn);
+    expect(screen.getAllByText('Truth be told, I never graduated from college.').length).toBeGreaterThanOrEqual(1);
   });
 
   it('opens vocabulary quick lookup when clicking a word in subtitles', async () => {

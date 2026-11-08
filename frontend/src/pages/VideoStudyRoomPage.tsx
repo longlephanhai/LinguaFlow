@@ -233,6 +233,9 @@ export function VideoStudyRoomPage() {
   const scriptViewportRef = useRef<HTMLDivElement | null>(null);
   const userAudioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
+  const [autoPauseShadowing, setAutoPauseShadowing] = useState<boolean>(true);
+  const [isSmartShadowActive, setIsSmartShadowActive] = useState<boolean>(false);
+  const smartShadowTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load Video Transcript
   const handleLoadVideo = async (urlToLoad?: string) => {
@@ -353,8 +356,8 @@ export function VideoStudyRoomPage() {
 
   // Determine active cue from currentTime
   useEffect(() => {
-    // In Dictation mode, the learner is practicing the selected cue and it should not jump cues during loop
-    if (activeTab === 'dictation') return;
+    // In Dictation or Shadowing mode, the learner is practicing the selected cue and it should not jump cues during playback
+    if (activeTab === 'dictation' || activeTab === 'shadowing') return;
     if (!videoData?.segments?.length) return;
     const index = videoData.segments.findIndex(
       (s) => currentTime >= s.startSeconds && currentTime <= s.endSeconds,
@@ -429,6 +432,20 @@ export function VideoStudyRoomPage() {
     setIsPlaying(false);
   }, []);
 
+  // Handle Shadowing auto-pause after each sentence
+  useEffect(() => {
+    if (activeTab === 'shadowing' && autoPauseShadowing && isPlaying && videoData?.segments?.length) {
+      const currentCue = videoData.segments[currentCueIndex];
+      if (currentCue && currentTime >= currentCue.endSeconds) {
+        pauseVideo();
+        if (playerRef.current?.seekTo) {
+          playerRef.current.seekTo(currentCue.startSeconds, true);
+          setCurrentTime(currentCue.startSeconds);
+        }
+      }
+    }
+  }, [activeTab, autoPauseShadowing, isPlaying, currentTime, currentCueIndex, videoData?.segments, pauseVideo]);
+
   const togglePlayPause = useCallback(() => {
     if (isPlaying) {
       pauseVideo();
@@ -451,6 +468,10 @@ export function VideoStudyRoomPage() {
   const jumpToCue = useCallback(
     (index: number) => {
       if (!videoData?.segments || !videoData.segments[index]) return;
+      if (smartShadowTimeoutRef.current) {
+        clearTimeout(smartShadowTimeoutRef.current);
+        setIsSmartShadowActive(false);
+      }
       setCurrentCueIndex(index);
       setDictationInput('');
       setFilledBlankIndices([]);
@@ -909,13 +930,45 @@ export function VideoStudyRoomPage() {
     if (!activeCue) return;
     seekToTimestamp(activeCue.startSeconds);
     playVideo();
-    const durationMs = (activeCue.endSeconds - activeCue.startSeconds) * 1000;
+    const effectiveSpeed = playbackSpeed > 0 ? playbackSpeed : 1;
+    const durationMs = ((activeCue.endSeconds - activeCue.startSeconds) / effectiveSpeed) * 1000;
     setTimeout(() => {
       pauseVideo();
-    }, durationMs + 200);
+      if (playerRef.current?.seekTo) {
+        playerRef.current.seekTo(activeCue.startSeconds, true);
+        setCurrentTime(activeCue.startSeconds);
+      }
+    }, durationMs);
+  };
+
+  const handleSmartShadowFlow = () => {
+    if (!activeCue) return;
+    setIsSmartShadowActive(true);
+    seekToTimestamp(activeCue.startSeconds);
+    playVideo();
+    const effectiveSpeed = playbackSpeed > 0 ? playbackSpeed : 1;
+    const durationMs = ((activeCue.endSeconds - activeCue.startSeconds) / effectiveSpeed) * 1000;
+
+    if (smartShadowTimeoutRef.current) {
+      clearTimeout(smartShadowTimeoutRef.current);
+    }
+
+    smartShadowTimeoutRef.current = setTimeout(() => {
+      pauseVideo();
+      if (playerRef.current?.seekTo) {
+        playerRef.current.seekTo(activeCue.startSeconds, true);
+        setCurrentTime(activeCue.startSeconds);
+      }
+      setIsSmartShadowActive(false);
+      handleStartShadowing();
+    }, durationMs);
   };
 
   const handleStartShadowing = () => {
+    if (smartShadowTimeoutRef.current) {
+      clearTimeout(smartShadowTimeoutRef.current);
+      setIsSmartShadowActive(false);
+    }
     pauseVideo();
     setIsCountdown(true);
     setCountdownNumber(3);
@@ -1604,23 +1657,94 @@ export function VideoStudyRoomPage() {
                   <Tabs.Panel value="shadowing" pt="sm">
                     <Stack gap="md">
                       <Group justify="space-between">
-                        <Badge color="teal" variant="light">
-                          Cue {currentCueIndex + 1} of {videoData.segments.length}
-                        </Badge>
+                        <Group gap="xs">
+                          <Badge color="teal" variant="light">
+                            Cue {currentCueIndex + 1} of {videoData.segments.length}
+                          </Badge>
+                          <ActionIcon
+                            variant="default"
+                            size="sm"
+                            disabled={currentCueIndex === 0}
+                            onClick={() => jumpToCue(currentCueIndex - 1)}
+                            title="Previous sentence"
+                          >
+                            <IconPlayerTrackPrev size={14} />
+                          </ActionIcon>
+                          <ActionIcon
+                            variant="default"
+                            size="sm"
+                            disabled={currentCueIndex >= videoData.segments.length - 1}
+                            onClick={() => jumpToCue(currentCueIndex + 1)}
+                            title="Next sentence"
+                          >
+                            <IconPlayerTrackNext size={14} />
+                          </ActionIcon>
+                        </Group>
                         <Text size="xs" c="dimmed">
                           Listen → Shadow Speak → AI Feedback
                         </Text>
                       </Group>
 
+                      {/* Speed & Auto-pause Settings for Shadowing */}
+                      <Paper p="xs" radius="md" withBorder style={{ backgroundColor: '#f8fafd' }}>
+                        <Group justify="space-between" wrap="wrap" gap="sm">
+                          <Group gap="xs" align="center">
+                            <Text size="xs" fw={600} c="dimmed">
+                              Tốc độ Shadowing:
+                            </Text>
+                            <SegmentedControl
+                              data-testid="shadowing-speed-control"
+                              size="xs"
+                              value={String(playbackSpeed)}
+                              onChange={(val) => changePlaybackSpeed(Number(val))}
+                              data={[
+                                { label: '0.75x Chậm', value: '0.75' },
+                                { label: '0.85x Vừa', value: '0.85' },
+                                { label: '1.0x Chuẩn', value: '1' },
+                              ]}
+                            />
+                          </Group>
+
+                          <Switch
+                            data-testid="shadowing-autopause-switch"
+                            size="xs"
+                            label="Tự dừng sau mỗi câu"
+                            checked={autoPauseShadowing}
+                            onChange={(e) => setAutoPauseShadowing(e.currentTarget.checked)}
+                          />
+                        </Group>
+                      </Paper>
+
                       {/* Target Sentence Box */}
                       <Paper p="md" radius="md" withBorder style={{ backgroundColor: '#f8f9fa' }}>
-                        <Text size="sm" c="dimmed" mb={4}>
-                          Target Sentence:
-                        </Text>
+                        <Group justify="space-between" align="flex-start" mb={4}>
+                          <Text size="sm" c="dimmed">
+                            Target Sentence:
+                          </Text>
+                          <Badge size="xs" variant="outline" color="blue">
+                            {playbackSpeed}x Speed
+                          </Badge>
+                        </Group>
                         <Text fw={600} size="md">
                           {activeCue?.text || 'Select a cue'}
                         </Text>
                       </Paper>
+
+                      {/* Smart 1-Click Practice Flow */}
+                      <Button
+                        data-testid="smart-shadow-btn"
+                        size="sm"
+                        variant="gradient"
+                        gradient={{ from: 'teal', to: 'indigo', deg: 60 }}
+                        leftSection={<IconSparkles size={16} />}
+                        loading={isSmartShadowActive}
+                        disabled={isRecording || isCountdown}
+                        onClick={handleSmartShadowFlow}
+                      >
+                        {isSmartShadowActive
+                          ? 'Đang phát mẫu...'
+                          : 'Luyện tự động (Nghe mẫu ➔ Tự dừng ➔ Nhại lại)'}
+                      </Button>
 
                       {/* Action Step Buttons */}
                       <Group grow>
@@ -1630,6 +1754,7 @@ export function VideoStudyRoomPage() {
                           variant="light"
                           color="blue"
                           leftSection={<IconVolume size={16} />}
+                          disabled={isRecording || isSmartShadowActive}
                           onClick={handlePlayNativeCue}
                         >
                           1. Listen Native
@@ -1642,7 +1767,7 @@ export function VideoStudyRoomPage() {
                             variant="filled"
                             color="red"
                             leftSection={<IconMicrophone size={16} />}
-                            disabled={isCountdown}
+                            disabled={isCountdown || isSmartShadowActive}
                             onClick={handleStartShadowing}
                           >
                             {isCountdown ? `Starting in ${countdownNumber}...` : '2. Record Voice'}
@@ -1774,6 +1899,17 @@ export function VideoStudyRoomPage() {
                                 Play My Recording
                               </Button>
                             </Group>
+
+                            <Button
+                              variant="subtle"
+                              color="blue"
+                              size="xs"
+                              rightSection={<IconPlayerTrackNext size={14} />}
+                              disabled={currentCueIndex >= videoData.segments.length - 1}
+                              onClick={() => jumpToCue(currentCueIndex + 1)}
+                            >
+                              Tiếp tục câu sau (Next Cue)
+                            </Button>
                             {recordedAudioUrl && (
                               <audio
                                 ref={userAudioPlayerRef}
