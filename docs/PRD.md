@@ -15,35 +15,38 @@
 - **G2 (Context Preservation):** Retain sentence context, source URL, and specific meaning for every saved item.
 - **G3 (Loop Closure):** Transform passive lookups into active, scheduled spaced reviews and AI quizzes.
 - **G4 (Active Application):** Provide AI chat and writing review tools to practice using saved vocabulary.
-- **G5 (Multimodal Listening & Speaking — P2):** Turn authentic streaming media (YouTube/Netflix) into active dictation and speech shadowing environments.
+- **G5 (Multimodal Listening & Speaking — P2):** Turn authentic streaming media (YouTube/Netflix) into active dictation and speech shadowing environments. (Completed)
+- **G6 (Academic Standard & Voice Immersion — P3):** Transform passive vocabulary into fluent spoken output through real-time AI voice conversations, standardized IELTS/CEFR academic rubrics, and automated document ingestion.
 
 ### Non-Goals (Out of Scope)
 - Full-page DOM scanning or passive page telemetry (violates privacy boundary).
 - Full AI tutoring with syllabus management or adaptive grade-level curriculum.
 - Export to CSV/Anki or team/classroom sharing.
 - Social features (leaderboards, friends, shared decks).
-- Offline mode (Extension and Web both require network for AI calls).
+- Standalone native mobile apps (PWA provides mobile web installability).
 
 ## 3. Target User & JTBD
 
-- **Primary User:** University students & young adults (B1–B2 level) reading English content and watching English video online.
+- **Primary User:** University students & young adults (B1–B2 level) reading English content, preparing for academic exams (IELTS/TOEIC), and watching English video online.
 - **JTBD-1 (In-Context Lookup):** Understand words in their exact current sentence without losing reading momentum.
 - **JTBD-2 (Contextual Saving):** Preserve words along with original sentences and video timestamps to remember usage.
 - **JTBD-3 (Spaced Recall):** Receive automated review prompts based on memory decay with audio/video context.
 - **JTBD-4 (Self-Testing):** Validate retention through AI-generated quizzes and listening dictation.
 - **JTBD-5 (Active Application):** Practice using saved words in AI chat conversations, writing essays, and line-by-line speech shadowing.
+- **JTBD-6 (Conversational & Academic Mastery):** Practice active spoken communication with AI voice calls and receive standardized IELTS/CEFR band scoring for academic and professional readiness.
 
 ## 4. Priority Tiers
 
-All functional requirements are classified into three priority tiers:
+All functional requirements are classified into four priority tiers:
 
 | Tier | Definition | Modules |
 |---|---|---|
-| **P0 — Launch Blocker** | Must be fully functional before first release. Without these, the core learning loop is broken. | Auth, Extension Capture, Vocabulary Management, Flashcard Review |
+| **P0 — Launch Blocker** | Must be fully functional before first release. Without these, the core learning loop is broken. (Completed) | Auth, Extension Capture, Vocabulary Management, Flashcard Review |
 | **P1 — MVP Enrichment** | Enriches textual learning loop and retention tracking. (Completed) | Quiz, AI Chat, Writing Review, Dashboard & Settings |
-| **P2 — Media & Multimodal (Current Roadmap)** | Transforms video consumption into active listening and speaking practice. Expands learning loop to media & speech. | Video Dual Subtitles & Overlay, Dictation Practice, Shadowing & AI Voice Assessment, Web Video Study Room, Multi-modal Flashcards |
+| **P2 — Media & Multimodal** | Transforms video consumption into active listening and speaking practice. (Completed) | Video Dual Subtitles & Overlay, Dictation Practice, Shadowing & AI Voice Assessment, Web Video Study Room, Multi-modal Flashcards |
+| **P3 — Academic Mastery & Voice Immersion (Advanced Roadmap)** | Bridges the competitive gap with market leaders (OpenQuiz) by enabling real-time voice conversations, IELTS/CEFR academic rubrics, document/PDF vocabulary ingestion, and PWA mobile access. | Real-Time AI Voice Call, Standardized IELTS/CEFR Rubrics (Writing & Speaking), Document/PDF Ingestion & CEFR Profiling, Progressive Web App (PWA) |
 
-> **Rule:** All P0 and P1 features must remain green across all test suites as P2 development proceeds.
+> **Rule:** All P0, P1, and P2 features must remain green across all test suites as P3 development proceeds.
 
 ## 5. User Journey — High-Level Flow
 
@@ -385,6 +388,63 @@ flowchart TD
 - Review cards saved from video can replay the exact audio/video snippet.
 - _AC-1:_ If occurrence has `mediaMetadata`, card back displays "Play Context Clip" button.
 - _AC-2:_ Clicking button loads embedded player pre-rolled 2 seconds before timestamp and stops 3 seconds after.
+
+### 6.14 Real-Time AI Voice Call / Speaking Tutor — P3
+
+**FR-VOICE-001: Bi-Directional Conversational Voice Call**
+- Real-time spoken dialogue simulating a voice phone call with an AI native speaker tutor.
+- _AC-1:_ Web client provides one-click "Start AI Voice Call" with visual audio waveform and call duration timer.
+- _AC-2:_ Continuous duplex voice interaction: user speaks into microphone → client captures audio → AI responds with low-latency spoken voice synthesis.
+- _AC-3:_ Push-to-talk and Voice Activity Detection (VAD) toggle modes available.
+
+**FR-VOICE-002: Active Due Vocabulary Injection**
+- AI tutor actively drives conversation topics to prompt the user to use due review vocabulary items.
+- _AC-1:_ Session pre-loads top 5–10 due vocabulary items from the user's SRS bank.
+- _AC-2:_ AI tutor models target words naturally in dialogue turns and asks targeted questions prompting the user to recall and speak them.
+- _AC-3:_ Real-time visual checklist tracks target words: greyed out → illuminated green upon successful spoken usage by the student.
+
+**FR-VOICE-003: Post-Call Spoken Fluency Report**
+- Comprehensive speaking performance summary delivered upon ending call.
+- _AC-1:_ Reports: Total Speaking Time, Words Spoken, Active Target Vocabulary Retention Rate (%).
+- _AC-2:_ Transcribes dialogue with inline highlighted grammar slips, filler word detection ("um", "uh"), and suggested natural phrasing alternatives.
+
+### 6.15 Standardized Academic Assessment (IELTS & CEFR) — P3
+
+**FR-ACAD-001: IELTS Writing Rubric Evaluation**
+- Writing evaluations grade essays according to official IELTS 4-criterion band descriptors (Band 1.0–9.0).
+- _AC-1:_ Evaluates user submissions across four standard dimensions:
+  1. *Task Achievement / Task Response (TR)*
+  2. *Coherence & Cohesion (CC)*
+  3. *Lexical Resource (LR)* — specifically measures proportion and sophistication of user's saved bank vocabulary utilized.
+  4. *Grammatical Range & Accuracy (GRA)*
+- _AC-2:_ Produces criterion-level sub-scores, overall IELTS band estimate (e.g. 6.5, 7.0), and CEFR proficiency equivalent (B2, C1).
+- _AC-3:_ Provides sentence-by-sentence upgrade recommendations matching Band 8+ academic writing conventions.
+
+**FR-ACAD-002: IELTS Speaking & Fluency Rubric in Shadowing/Voice**
+- Standardized speaking scoring for Shadowing attempts and Voice Calls.
+- _AC-1:_ Scores Fluency & Coherence, Lexical Resource, Grammatical Range, and Pronunciation (phonemic accuracy, word stress, intonation contours).
+- _AC-2:_ Maps pronunciation scores to IELTS speaking band equivalents.
+
+### 6.16 Document & Reading Material Ingestion (OCR / PDF) — P3
+
+**FR-DOC-001: PDF & Long Text Document Ingestion**
+- Users can import reading materials directly into LinguaFlow to harvest vocabulary.
+- _AC-1:_ Accepts PDF upload or long text paste (up to 20,000 words).
+- _AC-2:_ Parses text while preserving document paragraphs and sentence structure boundaries.
+
+**FR-DOC-002: Automated CEFR Vocabulary Profiling & Batch Save**
+- Automatic identification of advanced/academic vocabulary with context sentences.
+- _AC-1:_ Analyzes document against CEFR vocabulary frequency lists (A1–C2).
+- _AC-2:_ Surfaces B2, C1, C2 target lemmas that do not yet exist in the user's vocabulary bank.
+- _AC-3:_ Displays 1-click batch save modal with extracted context sentences, lemma definitions, and CEFR level tags, populating the 3-layer data model (`VocabularyItem` → `Meaning` → `Occurrence`).
+
+### 6.17 Progressive Web App (PWA) & Mobile Installability — P3
+
+**FR-PWA-001: Mobile Home Screen Install & Offline-First Review**
+- Installable web app providing mobile-native study convenience.
+- _AC-1:_ Manifest and Service Worker support "Add to Home Screen" on iOS Safari and Android Chrome with custom app icon and splash screen.
+- _AC-2:_ Local caching of due review flashcards allowing uninterrupted SRS review during intermittent connectivity.
+- _AC-3:_ Background sync queues SM-2 review results and synchronizes to MongoDB when connection restores.
 
 ## 7. Edge Cases & Error Handling (EDGE)
 

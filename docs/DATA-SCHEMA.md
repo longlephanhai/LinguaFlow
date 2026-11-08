@@ -338,6 +338,24 @@ One document per writing submission. Feedback is an AI snapshot (immutable after
   suggestions: [string],  // list of specific improvement points
   aiModel: string,        // model version used — auditability
 
+  // --- Academic Evaluation (Phase 3) ---
+  academicRubric: {
+    ieltsBand: number,            // 1.0 .. 9.0 (0.5 step)
+    cefrLevel: string,           // "A1" | "A2" | "B1" | "B2" | "C1" | "C2"
+    taskAchievement: number,     // 1.0 .. 9.0
+    coherenceCohesion: number,   // 1.0 .. 9.0
+    lexicalResource: number,     // 1.0 .. 9.0
+    grammaticalRange: number,    // 1.0 .. 9.0
+    targetWordsUsedCount: number, // count of user's bank vocabulary accurately used
+    upgrades: [
+      {
+        originalSentence: string,
+        improvedSentence: string,
+        explanation: string,
+      }
+    ],
+  } | null,
+
   // --- Soft Delete ---
   isDeleted: boolean,    // default false
   deletedAt: Date | null,
@@ -541,9 +559,112 @@ Records audio submissions, phoneme breakdown, and AI fluency scores.
   ],
   audioUrl: string | null,  // stored audio recording URL (optional)
 
+  // --- Academic Evaluation (Phase 3) ---
+  ieltsSpeakingBand: number | null, // 1.0 .. 9.0
+
   // --- Timestamps ---
   createdAt: Date,
 }
+```
+
+---
+
+## `voiceSessions` (Phase 3) — real-time conversational AI speaking calls
+
+Records voice dialogue sessions with the AI tutor, target vocabulary recall, and fluency metrics.
+
+```ts
+{
+  _id: ObjectId,
+
+  // --- Ownership ---
+  userId: ObjectId,         // ref: users, indexed
+
+  // --- Session Attributes ---
+  topic: string,            // conversation theme or scenario prompt
+  durationSeconds: number,  // total call duration
+  targetVocabularyItemIds: [ObjectId], // ref: vocabularyItems (words scheduled for reinforcement)
+  usedVocabularyItemIds: [ObjectId],   // ref: vocabularyItems (words successfully spoken)
+
+  // --- Dialogue History ---
+  dialogueHistory: [
+    {
+      role: "user" | "assistant",
+      text: string,
+      timestamp: Date,
+      detectedTargetWords: [string],
+      grammarFeedback: string | null,
+    }
+  ],
+
+  // --- Fluency Metrics ---
+  spokenMetrics: {
+    totalWordsSpoken: number,
+    speakingPaceWpm: number,        // words per minute
+    fillerWordsCount: number,       // "um", "uh", "like" count
+    retentionRate: number,          // (used / target) * 100
+    overallIeltsFluencyBand: number, // 1.0 .. 9.0
+  },
+
+  // --- Soft Delete ---
+  isDeleted: boolean,       // default false
+  deletedAt: Date | null,
+
+  // --- Timestamps ---
+  createdAt: Date,
+  updatedAt: Date,
+}
+```
+
+**Indexes:**
+```
+{ userId: 1, isDeleted: 1, createdAt: -1 }
+```
+
+---
+
+## `documents` (Phase 3) — ingested reading materials & PDF uploads
+
+Stores imported reading texts and parsed CEFR lexical profile candidate lemmas.
+
+```ts
+{
+  _id: ObjectId,
+
+  // --- Ownership ---
+  userId: ObjectId,         // ref: users, indexed
+
+  // --- Document Metadata ---
+  title: string,            // filename or user title
+  fileType: "pdf" | "text",
+  totalWordCount: number,
+  extractedLemmasCount: number,
+
+  // --- Candidate Lexical Profile ---
+  candidateLemmas: [
+    {
+      lemma: string,
+      cefrLevel: "B2" | "C1" | "C2",
+      partOfSpeech: string,
+      contextSentence: string,
+      definition: string,
+      isSaved: boolean,     // true once committed to vocabularyItems
+    }
+  ],
+
+  // --- Soft Delete ---
+  isDeleted: boolean,       // default false
+  deletedAt: Date | null,
+
+  // --- Timestamps ---
+  createdAt: Date,
+  updatedAt: Date,
+}
+```
+
+**Indexes:**
+```
+{ userId: 1, isDeleted: 1, createdAt: -1 }
 ```
 
 ---
@@ -567,6 +688,8 @@ This 3-layer constraint is a **fixed invariant** from `PRD.md §FR-VOCAB-002` an
 | Delete `occurrence` (FR-VOCAB-003) | Set `isDeleted = true` on occurrence **only** — parent meaning and lemma are preserved |
 | Delete `chatSession` | Set `isDeleted = true` on session only (messages are embedded, no cascade needed) |
 | Delete `writingReview` | Set `isDeleted = true` on review only |
+| Delete `voiceSession` | Set `isDeleted = true` on voice session only |
+| Delete `document` | Set `isDeleted = true` on document record only (does not delete already-saved vocabulary items) |
 | Delete `quizResult` | Not permitted — quiz results are permanent learning records |
 | Delete `user` account | Soft-delete user + cascade all owned documents |
 | Delete `role` | Set `isDeleted = true` on role; users holding this role revert to default role permissions |
@@ -580,4 +703,5 @@ This 3-layer constraint is a **fixed invariant** from `PRD.md §FR-VOCAB-002` an
 |---|---|---|
 | v1 | 2026-09-27 | Initial schema — full timestamps, soft-delete (`isDeleted` / `deletedAt`), enriched fields: `partOfSpeech`, `sourceTitle`, `capturedAt`, `selectedText`, `review.suspended`, `aiModel`, `quiz.status`, `quizResult.totalQuestions/timeSpentMs`, `chatSession.title`, `writingReview.wordCount`, `users.timezone/displayName/refreshTokenHash` |
 | v2 | 2026-10-18 | RBAC Authorization — added `roles` and `permissions` collections, added `roleId` reference to `users` |
+| v3 | 2026-11-08 | Phase 3 Expansion — added `academicRubric` to `writingReviews`, added `voiceSessions` collection for AI phone calls, added `documents` collection for PDF/CEFR vocabulary ingestion |
 
