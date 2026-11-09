@@ -405,7 +405,7 @@ export class VoiceService {
           deletedAt: new Date(),
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     if (!session) {
