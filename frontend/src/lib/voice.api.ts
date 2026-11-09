@@ -100,33 +100,28 @@ export interface VoiceSessionDetailResponse {
 }
 
 export const voiceApi = {
-  startSession: async (payload: StartVoiceSessionRequest = {}): Promise<StartVoiceSessionResponse> => {
-    const res = await api.post('/voice/start', payload);
-    return res.data.data;
+  startSession: (payload: StartVoiceSessionRequest = {}): Promise<StartVoiceSessionResponse> => {
+    return api.post('/voice/start', payload) as unknown as Promise<StartVoiceSessionResponse>;
   },
 
-  sendTurn: async (payload: VoiceTurnRequest): Promise<VoiceTurnResponse> => {
-    const res = await api.post('/voice/turn', payload);
-    return res.data.data;
+  sendTurn: (payload: VoiceTurnRequest): Promise<VoiceTurnResponse> => {
+    return api.post('/voice/turn', payload) as unknown as Promise<VoiceTurnResponse>;
   },
 
-  endSession: async (payload: EndVoiceSessionRequest): Promise<EndVoiceSessionResponse> => {
-    const res = await api.post('/voice/end', payload);
-    return res.data.data;
+  endSession: (payload: EndVoiceSessionRequest): Promise<EndVoiceSessionResponse> => {
+    return api.post('/voice/end', payload) as unknown as Promise<EndVoiceSessionResponse>;
   },
 
-  getSessions: async (page = 1, limit = 10): Promise<VoiceSessionsListResponse> => {
-    const res = await api.get('/voice/sessions', { params: { page, limit } });
-    return res.data.data;
+  getSessions: (page = 1, limit = 10): Promise<VoiceSessionsListResponse> => {
+    return api.get('/voice/sessions', { params: { page, limit } }) as unknown as Promise<VoiceSessionsListResponse>;
   },
 
-  getSessionById: async (id: string): Promise<VoiceSessionDetailResponse> => {
-    const res = await api.get(`/voice/sessions/${id}`);
-    return res.data.data;
+  getSessionById: (id: string): Promise<VoiceSessionDetailResponse> => {
+    return api.get(`/voice/sessions/${id}`) as unknown as Promise<VoiceSessionDetailResponse>;
   },
 
-  deleteSession: async (id: string): Promise<{ success: boolean }> => {
-    const res = await api.delete(`/voice/sessions/${id}`);
-    return res.data.data;
+  deleteSession: (id: string): Promise<{ success: boolean }> => {
+    return api.delete(`/voice/sessions/${id}`) as unknown as Promise<{ success: boolean }>;
   },
 };
+
