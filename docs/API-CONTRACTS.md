@@ -308,6 +308,16 @@ Response: `{ "sessionId": "...", "durationSeconds": 185, "spokenMetrics": { "tot
 Request: `{ "title"?: "The Future of Remote Work", "text": "...", "sourceUrl"?: "https://medium.com/..." }`
 Response: `{ "articleId": "...", "title": "The Future of Remote Work", "totalWordCount": 850, "paragraphs": [{ "sentences": [{ "text": "...", "tokens": ["..."] }] }], "discoveredVocabulary": [{ "lemma": "ubiquitous", "contextSentence": "Remote collaboration tools have become ubiquitous in modern workflows.", "suggestedMeaning": "present or found everywhere" }] }`
 
+**`GET /reader/articles`** — list user's saved reading articles
+Query: `?page=1&limit=10`
+Response: `{ "items": [{ "id": "...", "title": "The Future of Remote Work", "totalWordCount": 850, "extractedLemmasCount": 4, "createdAt": "...", "updatedAt": "..." }], "total": 1, "page": 1, "limit": 10, "totalPages": 1 }`
+
+**`GET /reader/articles/:id`** — retrieve saved article with structured paragraphs and discovered vocabulary
+Response: `{ "id": "...", "title": "The Future of Remote Work", "content": "...", "sourceUrl": "...", "totalWordCount": 850, "paragraphs": [{ "sentences": [{ "text": "...", "tokens": ["..."] }] }], "discoveredVocabulary": [{ "lemma": "ubiquitous", "partOfSpeech": "adjective", "contextSentence": "...", "definition": "...", "isSaved": false }] }`
+
+**`DELETE /reader/articles/:id`** — soft delete a saved article
+Response: `{ "success": true }`
+
 **`POST /reader/batch-save`** — commit selected words from reader into 3-layer vocabulary bank
 Request: `{ "articleId": "...", "items": [{ "lemma": "ubiquitous", "meaning": "present or found everywhere", "contextSentence": "Remote collaboration tools have become ubiquitous..." }] }`
 Response: `{ "savedCount": 1, "occurrences": [{ "id": "...", "lemma": "ubiquitous" }] }`

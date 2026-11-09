@@ -45,6 +45,13 @@ export interface SpeechEvaluationResult {
   generalTips: string;
 }
 
+export interface DiscoveredVocabularyItem {
+  lemma: string;
+  partOfSpeech: string;
+  contextSentence: string;
+  definition: string;
+}
+
 export interface AIProvider {
   explainInContext(selectedText: string, contextText: string): Promise<ExplainInContextResult>;
   generateQuiz(items: QuizItemInput[], count: number): Promise<GeneratedQuestion[]>;
@@ -55,6 +62,7 @@ export interface AIProvider {
     userTranscript: string,
     userAudioBase64?: string,
   ): Promise<SpeechEvaluationResult>;
+  extractVocabularyFromText(text: string, count?: number): Promise<DiscoveredVocabularyItem[]>;
 }
 
 export const AI_PROVIDER_TOKEN = Symbol('AI_PROVIDER_TOKEN');

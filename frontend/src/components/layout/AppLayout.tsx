@@ -12,6 +12,7 @@ import {
   IconMessageChatbot, 
   IconPencil, 
   IconPlayerPlay,
+  IconArticle,
   IconSettings,
   IconSun,
   IconMoon,
@@ -21,6 +22,7 @@ import {
 const navData = [
   { label: 'Dashboard', icon: IconDashboard, link: '/dashboard' },
   { label: 'Vocabulary', icon: IconBook, link: '/vocabulary' },
+  { label: 'Reader', icon: IconArticle, link: '/reader' },
   { label: 'Review', icon: IconCards, link: '/flashcards' },
   { label: 'Quiz', icon: IconBrain, link: '/quiz' },
   { label: 'AI Chat', icon: IconMessageChatbot, link: '/chat' },

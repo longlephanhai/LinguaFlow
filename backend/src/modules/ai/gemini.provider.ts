@@ -10,6 +10,7 @@ import {
   WritingReviewResult,
   WordSpeechEvaluation,
   SpeechEvaluationResult,
+  DiscoveredVocabularyItem,
 } from './ai-provider.interface.js';
 
 @Injectable()
@@ -612,6 +613,106 @@ Respond ONLY with a valid JSON object matching the schema above.
         ? 'Great pronunciation and pacing! Keep it up.'
         : 'Focus on enunciating each consonant clearly and matching the speaker rhythm.',
     };
+  }
+
+  async extractVocabularyFromText(
+    text: string,
+    count: number = 6,
+  ): Promise<DiscoveredVocabularyItem[]> {
+    const client = this.client || this.initClient();
+    if (!client) {
+      // Fallback: extract several interesting candidate words without AI if API key is not configured
+      return this.fallbackExtractVocabulary(text, count);
+    }
+
+    const truncated = text.length > 5000 ? text.slice(0, 5000) : text;
+
+    const prompt = `
+You are an expert English language reading tutor.
+Analyze this reading passage and select ${count} valuable, interesting, or commonly misunderstood vocabulary words or phrasal verbs (aiming for intermediate / practical B1-B2 level words).
+Do NOT pick trivial basic words like "the", "have", "make", "good", "people".
+
+For each selected item:
+- "lemma": the base dictionary form in lowercase (e.g. "ubiquitous", "leverage", "turn out")
+- "partOfSpeech": "noun" | "verb" | "adjective" | "adverb" | "phrasal verb"
+- "contextSentence": the exact or cleaned full sentence from the passage where this word appears
+- "definition": a clear, helpful Vietnamese definition explaining this word's meaning in this context
+
+Respond ONLY with a valid JSON array matching this structure:
+[
+  {
+    "lemma": "...",
+    "partOfSpeech": "...",
+    "contextSentence": "...",
+    "definition": "..."
+  }
+]
+
+Passage:
+"""
+${truncated}
+"""
+`.trim();
+
+    try {
+      const response = await client.models.generateContent({
+        model: this.primaryModel,
+        contents: prompt,
+        config: {
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const responseText = response.text?.trim() || '[]';
+      const parsed = JSON.parse(responseText);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((item) => ({
+          lemma: String(item.lemma || '').trim().toLowerCase(),
+          partOfSpeech: String(item.partOfSpeech || 'noun').trim(),
+          contextSentence: String(item.contextSentence || '').trim(),
+          definition: String(item.definition || '').trim(),
+        })).filter((item) => item.lemma && item.contextSentence && item.definition);
+      }
+      return this.fallbackExtractVocabulary(text, count);
+    } catch (err) {
+      this.logger.warn(`Gemini vocabulary extraction failed, using fallback: ${err}`);
+      return this.fallbackExtractVocabulary(text, count);
+    }
+  }
+
+  private fallbackExtractVocabulary(text: string, count: number): DiscoveredVocabularyItem[] {
+    const sentences = text
+      .split(/(?<=[.?!])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 20);
+
+    const candidates: DiscoveredVocabularyItem[] = [];
+    const seen = new Set<string>();
+
+    for (const sentence of sentences) {
+      const words = sentence
+        .replace(/[^a-zA-Z\s]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length >= 6);
+
+      for (const w of words) {
+        const lower = w.toLowerCase();
+        if (!seen.has(lower)) {
+          seen.add(lower);
+          candidates.push({
+            lemma: lower,
+            partOfSpeech: 'vocabulary',
+            contextSentence: sentence,
+            definition: `Ý nghĩa theo ngữ cảnh của "${lower}"`,
+          });
+          break;
+        }
+      }
+      if (candidates.length >= count) break;
+    }
+
+    return candidates;
   }
 }
 

@@ -616,6 +616,7 @@ Stores imported reading texts, articles, and discovered in-context vocabulary.
 
   // --- Document Metadata ---
   title: string,            // filename, article headline, or user title
+  content: string,          // full raw text of the article
   sourceUrl: string | null, // optional source article link
   totalWordCount: number,
   extractedLemmasCount: number,
