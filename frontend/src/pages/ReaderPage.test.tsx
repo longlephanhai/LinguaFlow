@@ -18,7 +18,7 @@ vi.mock('../lib/reader.api', () => ({
 
 vi.mock('../lib/vocabulary.api', () => ({
   vocabularyApi: {
-    lookup: vi.fn(),
+    lookupInContext: vi.fn(),
     saveOccurrence: vi.fn(),
   },
 }));
@@ -111,7 +111,7 @@ describe('ReaderPage', () => {
 
   it('clicks a word to trigger in-context lookup modal and saves word', async () => {
     vi.mocked(readerApi.parseArticle).mockResolvedValue(mockParsedArticle);
-    vi.mocked(vocabularyApi.lookup).mockResolvedValue({
+    vi.mocked(vocabularyApi.lookupInContext).mockResolvedValue({
       lemma: 'ubiquitous',
       meaning: 'có mặt ở khắp mọi nơi',
       example: 'Smartphones are ubiquitous today.',
@@ -119,9 +119,9 @@ describe('ReaderPage', () => {
       cached: false,
     });
     vi.mocked(vocabularyApi.saveOccurrence).mockResolvedValue({
-      item: {} as any,
-      meaning: {} as any,
-      occurrence: { _id: 'occ-1' } as any,
+      occurrenceId: 'occ-1',
+      vocabularyItemId: 'voc-1',
+      meaningId: 'mean-1',
     });
 
     renderComponent();
@@ -191,3 +191,4 @@ describe('ReaderPage', () => {
     });
   });
 });
+

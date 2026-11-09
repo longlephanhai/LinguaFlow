@@ -56,6 +56,14 @@ export interface SaveOccurrencePayload {
   mediaMetadata?: MediaMetadataPayload;
 }
 
+export interface LookupResult {
+  lemma: string;
+  meaning: string;
+  example: string;
+  partOfSpeech?: string | null;
+  cached?: boolean;
+}
+
 export const vocabularyApi = {
   getVocabularyList: async (params?: { page?: number; limit?: number; search?: string }): Promise<VocabularyListResponse> => {
     return api.get('/vocabulary', { params }) as unknown as Promise<VocabularyListResponse>;
@@ -84,13 +92,7 @@ export const vocabularyApi = {
   lookupInContext: async (
     selectedText: string,
     contextText: string,
-  ): Promise<{ lemma: string; meaning: string; example: string; partOfSpeech?: string | null; cached?: boolean }> => {
-    return api.post('/vocabulary/lookup', { selectedText, contextText }) as unknown as Promise<{
-      lemma: string;
-      meaning: string;
-      example: string;
-      partOfSpeech?: string | null;
-      cached?: boolean;
-    }>;
+  ): Promise<LookupResult> => {
+    return api.post('/vocabulary/lookup', { selectedText, contextText }) as unknown as Promise<LookupResult>;
   },
 };

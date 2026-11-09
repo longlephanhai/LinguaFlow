@@ -32,13 +32,14 @@ import {
   IconExternalLink,
   IconBook,
 } from '@tabler/icons-react';
-import {
-  readerApi,
+import { readerApi } from '../lib/reader.api';
+import type {
   ParsedArticleResponse,
   ArticleListItem,
   DiscoveredVocabItem,
 } from '../lib/reader.api';
-import { vocabularyApi, LookupResult } from '../lib/vocabulary.api';
+import { vocabularyApi } from '../lib/vocabulary.api';
+import type { LookupResult } from '../lib/vocabulary.api';
 
 const SAMPLE_ARTICLES = [
   {
@@ -192,11 +193,7 @@ export function ReaderPage() {
     setLookupData(null);
 
     try {
-      const res = await vocabularyApi.lookup({
-        selectedText: cleanWord,
-        contextText: parentSentence,
-        sourceUrl: activeArticle?.sourceUrl || 'https://linguaflow.local/reader',
-      });
+      const res = await vocabularyApi.lookupInContext(cleanWord, parentSentence);
       setLookupData(res);
     } catch {
       setLookupData({
