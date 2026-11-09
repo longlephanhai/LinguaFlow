@@ -18,6 +18,7 @@ import { VideoModule } from './modules/video/video.module.js';
 import { DictationModule } from './modules/dictation/dictation.module.js';
 import { ShadowingModule } from './modules/shadowing/shadowing.module.js';
 import { ReaderModule } from './modules/reader/reader.module.js';
+import { VoiceModule } from './modules/voice/voice.module.js';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ReaderModule } from './modules/reader/reader.module.js';
     DictationModule,
     ShadowingModule,
     ReaderModule,
+    VoiceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

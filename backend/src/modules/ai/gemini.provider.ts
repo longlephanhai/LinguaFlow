@@ -11,6 +11,9 @@ import {
   WordSpeechEvaluation,
   SpeechEvaluationResult,
   DiscoveredVocabularyItem,
+  ScenarioTargetWord,
+  ScenarioTurnResult,
+  ScenarioSessionSummaryResult,
 } from './ai-provider.interface.js';
 
 @Injectable()
@@ -714,5 +717,263 @@ ${truncated}
 
     return candidates;
   }
+
+  async generateScenarioGreeting(
+    scenarioPreset: string,
+    topic?: string,
+    targetVocabulary?: ScenarioTargetWord[],
+  ): Promise<string> {
+    const client = this.client || this.initClient();
+    if (!client) {
+      return this.fallbackScenarioGreeting(scenarioPreset);
+    }
+
+    const vocabList = targetVocabulary?.map((v) => `${v.lemma} (${v.meaning})`).join(', ') || 'none';
+    const prompt = `
+You are roleplaying a friendly native speaker in a practical everyday English scenario.
+Scenario preset: ${scenarioPreset}
+Topic / Setting: ${topic || scenarioPreset}
+Target vocabulary to naturally prompt during this conversation: ${vocabList}
+
+Instructions:
+1. Provide a warm, natural, and authentic 1-2 sentence opening greeting as your character.
+2. Ask an engaging open-ended question to invite the learner to speak.
+3. Keep it conversational and natural. Do NOT output quotes, prefixes, or stage directions.
+
+Greeting:
+`.trim();
+
+    try {
+      const response = await client.models.generateContent({
+        model: this.primaryModel,
+        contents: prompt,
+        config: {
+          temperature: 0.7,
+        },
+      });
+
+      const text = response.text?.trim();
+      return text || this.fallbackScenarioGreeting(scenarioPreset);
+    } catch (err) {
+      this.logger.warn(`Gemini generateScenarioGreeting failed, using fallback: ${err}`);
+      return this.fallbackScenarioGreeting(scenarioPreset);
+    }
+  }
+
+  private fallbackScenarioGreeting(scenarioPreset: string): string {
+    switch (scenarioPreset) {
+      case 'coffee_shop':
+        return 'Hi there! Welcome to the cafe. What can I get started for you today?';
+      case 'hotel_travel':
+        return 'Good afternoon! Welcome to the Grand View Hotel. How can I assist you with your stay today?';
+      case 'job_interview':
+        return 'Hello and welcome! Thank you for meeting with me today. Could you tell me a little bit about yourself and your background?';
+      case 'casual_chat':
+      default:
+        return "Hey! It's so good to catch up with you. How has your day been going so far?";
+    }
+  }
+
+  async scenarioTurn(params: {
+    scenarioPreset: string;
+    topic: string;
+    targetVocabulary: ScenarioTargetWord[];
+    usedVocabulary: string[];
+    history: { role: 'user' | 'assistant'; text: string }[];
+    userTranscript: string;
+  }): Promise<ScenarioTurnResult> {
+    const { scenarioPreset, topic, targetVocabulary, usedVocabulary, history, userTranscript } = params;
+    const client = this.client || this.initClient();
+    if (!client) {
+      return this.fallbackScenarioTurn(targetVocabulary, usedVocabulary, userTranscript);
+    }
+
+    const remainingVocab = targetVocabulary
+      .filter((v) => !usedVocabulary.map((u) => u.toLowerCase()).includes(v.lemma.toLowerCase()))
+      .map((v) => `${v.lemma} (${v.meaning})`)
+      .join(', ');
+
+    const recentHistory = history
+      .slice(-6)
+      .map((h) => `${h.role === 'user' ? 'Learner' : 'Assistant'}: ${h.text}`)
+      .join('\n');
+
+    const prompt = `
+You are a supportive native English conversation partner in an everyday scenario.
+Scenario: ${scenarioPreset} - ${topic}
+Target vocabulary the learner is practicing: ${targetVocabulary.map((v) => v.lemma).join(', ')}
+Remaining target words to naturally elicit: ${remainingVocab || 'all practiced'}
+
+Recent dialogue:
+${recentHistory}
+Learner just said: "${userTranscript}"
+
+Instructions:
+1. "assistantText": Respond naturally and concisely in 1-3 sentences in English. Stay strictly in character. If appropriate, casually steer the conversation or ask a question that naturally prompts one of the remaining target words.
+2. "detectedTargetWords": Inspect the learner's utterance ("${userTranscript}") and check if they used any of the target words (matching lemmas or inflected forms like scale, scaled, scaling). Return an array of lemmas (e.g. ["scale"]).
+3. "phrasingFeedback": If the learner's phrasing had unnatural wording, subtle grammar issues, or awkward phrasing, provide 1 short, warm, constructive recommendation starting with "A native speaker might say: ...". If their sentence was natural and clear, set this to null. Never give exam band scores.
+
+Respond ONLY with valid JSON:
+{
+  "assistantText": "...",
+  "detectedTargetWords": [],
+  "phrasingFeedback": null
 }
+`.trim();
+
+    try {
+      const response = await client.models.generateContent({
+        model: this.primaryModel,
+        contents: prompt,
+        config: {
+          temperature: 0.6,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const responseText = response.text?.trim() || '{}';
+      const parsed = JSON.parse(responseText);
+
+      // Local lemma check safeguard
+      const localDetected = targetVocabulary
+        .filter((tv) => {
+          const regex = new RegExp(`\\b${tv.lemma}\\b`, 'i');
+          return regex.test(userTranscript);
+        })
+        .map((tv) => tv.lemma.toLowerCase());
+
+      const combinedDetected = Array.from(
+        new Set([...(Array.isArray(parsed.detectedTargetWords) ? parsed.detectedTargetWords.map(String) : []), ...localDetected]),
+      );
+
+      return {
+        assistantText: parsed.assistantText || "That's interesting! Tell me more about that.",
+        detectedTargetWords: combinedDetected,
+        phrasingFeedback: parsed.phrasingFeedback || null,
+      };
+    } catch (err) {
+      this.logger.warn(`Gemini scenarioTurn failed, using fallback: ${err}`);
+      return this.fallbackScenarioTurn(targetVocabulary, usedVocabulary, userTranscript);
+    }
+  }
+
+  private fallbackScenarioTurn(
+    targetVocabulary: ScenarioTargetWord[],
+    usedVocabulary: string[],
+    userTranscript: string,
+  ): ScenarioTurnResult {
+    const detected: string[] = [];
+    for (const item of targetVocabulary) {
+      const regex = new RegExp(`\\b${item.lemma}\\b`, 'i');
+      if (regex.test(userTranscript)) {
+        detected.push(item.lemma.toLowerCase());
+      }
+    }
+
+    return {
+      assistantText: "That makes total sense! Could you tell me a bit more about what you have in mind?",
+      detectedTargetWords: detected,
+      phrasingFeedback: null,
+    };
+  }
+
+  async evaluateScenarioSession(params: {
+    scenarioPreset: string;
+    topic: string;
+    dialogueHistory: { role: 'user' | 'assistant'; text: string }[];
+    targetVocabulary: ScenarioTargetWord[];
+    usedVocabulary: string[];
+    durationSeconds: number;
+  }): Promise<ScenarioSessionSummaryResult> {
+    const { scenarioPreset, topic, dialogueHistory, targetVocabulary, usedVocabulary, durationSeconds } = params;
+    const client = this.client || this.initClient();
+
+    const userTurns = dialogueHistory.filter((d) => d.role === 'user');
+    const totalWords = userTurns.reduce((acc, t) => acc + t.text.split(/\s+/).filter(Boolean).length, 0);
+    const minutes = Math.max(0.5, durationSeconds / 60);
+    const calculatedWpm = Math.round(totalWords / minutes);
+
+    if (!client) {
+      return this.fallbackScenarioSummary(totalWords, calculatedWpm, targetVocabulary.length, usedVocabulary.length);
+    }
+
+    const dialogueText = dialogueHistory
+      .map((d) => `${d.role === 'user' ? 'Learner' : 'Assistant'}: ${d.text}`)
+      .join('\n');
+
+    const prompt = `
+Analyze this completed English scenario conversation session.
+Scenario: ${scenarioPreset} - ${topic}
+Session duration: ${durationSeconds} seconds
+Learner words spoken: ~${totalWords}
+Target vocabulary practiced: ${targetVocabulary.map((v) => v.lemma).join(', ')}
+Target vocabulary successfully used: ${usedVocabulary.join(', ')}
+
+Full dialogue:
+${dialogueText}
+
+Instructions:
+1. "dialogueSummary": 1-2 sentences warmly summarizing how the conversation went and praising learner engagement.
+2. "naturalPhrasingTips": 2-3 specific, constructive suggestions highlighting phrases the learner used and how a native speaker would phrase them more naturally (e.g., "Instead of '...', you can say '...'").
+3. "conversationFluencyScore": An integer score from 65 to 98 evaluating communication flow, clarity, and willingness to converse.
+4. "fillerWordsCount": Approximate count of filler words ("um", "uh", "like", "you know") used by the learner.
+
+Respond ONLY with valid JSON:
+{
+  "dialogueSummary": "...",
+  "naturalPhrasingTips": [
+    "..."
+  ],
+  "conversationFluencyScore": 85,
+  "fillerWordsCount": 2
+}
+`.trim();
+
+    try {
+      const response = await client.models.generateContent({
+        model: this.primaryModel,
+        contents: prompt,
+        config: {
+          temperature: 0.4,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const responseText = response.text?.trim() || '{}';
+      const parsed = JSON.parse(responseText);
+
+      return {
+        dialogueSummary: parsed.dialogueSummary || 'Great practical conversational interaction! You communicated your ideas clearly and kept the dialogue moving.',
+        naturalPhrasingTips: Array.isArray(parsed.naturalPhrasingTips) && parsed.naturalPhrasingTips.length > 0
+          ? parsed.naturalPhrasingTips.map(String)
+          : ['Keep practicing connected speech when answering open-ended questions.'],
+        conversationFluencyScore: typeof parsed.conversationFluencyScore === 'number' ? parsed.conversationFluencyScore : 85,
+        speakingPaceWpm: calculatedWpm,
+        fillerWordsCount: typeof parsed.fillerWordsCount === 'number' ? parsed.fillerWordsCount : 2,
+      };
+    } catch (err) {
+      this.logger.warn(`Gemini evaluateScenarioSession failed, using fallback: ${err}`);
+      return this.fallbackScenarioSummary(totalWords, calculatedWpm, targetVocabulary.length, usedVocabulary.length);
+    }
+  }
+
+  private fallbackScenarioSummary(
+    totalWords: number,
+    wpm: number,
+    targetCount: number,
+    usedCount: number,
+  ): ScenarioSessionSummaryResult {
+    return {
+      dialogueSummary: 'Great casual conversational practice! You successfully maintained a natural dialogue and expressed your thoughts effectively.',
+      naturalPhrasingTips: [
+        "In everyday situations, try using conversational transitions like 'By the way' or 'Actually'.",
+        'Feel free to ask follow-up questions to keep the interaction dynamic.',
+      ],
+      conversationFluencyScore: Math.min(95, Math.max(70, 75 + Math.round((usedCount / (targetCount || 1)) * 20))),
+      speakingPaceWpm: wpm || 110,
+      fillerWordsCount: 1,
+    };
+  }
+}
+
 

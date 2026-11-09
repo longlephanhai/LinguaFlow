@@ -52,6 +52,26 @@ export interface DiscoveredVocabularyItem {
   definition: string;
 }
 
+export interface ScenarioTargetWord {
+  id: string;
+  lemma: string;
+  meaning: string;
+}
+
+export interface ScenarioTurnResult {
+  assistantText: string;
+  detectedTargetWords: string[];
+  phrasingFeedback: string | null;
+}
+
+export interface ScenarioSessionSummaryResult {
+  dialogueSummary: string;
+  naturalPhrasingTips: string[];
+  conversationFluencyScore: number;
+  speakingPaceWpm?: number;
+  fillerWordsCount?: number;
+}
+
 export interface AIProvider {
   explainInContext(selectedText: string, contextText: string): Promise<ExplainInContextResult>;
   generateQuiz(items: QuizItemInput[], count: number): Promise<GeneratedQuestion[]>;
@@ -63,6 +83,27 @@ export interface AIProvider {
     userAudioBase64?: string,
   ): Promise<SpeechEvaluationResult>;
   extractVocabularyFromText(text: string, count?: number): Promise<DiscoveredVocabularyItem[]>;
+  generateScenarioGreeting(
+    scenarioPreset: string,
+    topic?: string,
+    targetVocabulary?: ScenarioTargetWord[],
+  ): Promise<string>;
+  scenarioTurn(params: {
+    scenarioPreset: string;
+    topic: string;
+    targetVocabulary: ScenarioTargetWord[];
+    usedVocabulary: string[];
+    history: { role: 'user' | 'assistant'; text: string }[];
+    userTranscript: string;
+  }): Promise<ScenarioTurnResult>;
+  evaluateScenarioSession(params: {
+    scenarioPreset: string;
+    topic: string;
+    dialogueHistory: { role: 'user' | 'assistant'; text: string }[];
+    targetVocabulary: ScenarioTargetWord[];
+    usedVocabulary: string[];
+    durationSeconds: number;
+  }): Promise<ScenarioSessionSummaryResult>;
 }
 
 export const AI_PROVIDER_TOKEN = Symbol('AI_PROVIDER_TOKEN');

@@ -88,5 +88,35 @@ export class AiService {
   async extractVocabularyFromText(text: string, count?: number) {
     return this.aiProvider.extractVocabularyFromText(text, count);
   }
+
+  async generateScenarioGreeting(
+    scenarioPreset: string,
+    topic?: string,
+    targetVocabulary?: import('./ai-provider.interface.js').ScenarioTargetWord[],
+  ) {
+    return this.aiProvider.generateScenarioGreeting(scenarioPreset, topic, targetVocabulary);
+  }
+
+  async scenarioTurn(params: {
+    scenarioPreset: string;
+    topic: string;
+    targetVocabulary: import('./ai-provider.interface.js').ScenarioTargetWord[];
+    usedVocabulary: string[];
+    history: { role: 'user' | 'assistant'; text: string }[];
+    userTranscript: string;
+  }) {
+    return this.aiProvider.scenarioTurn(params);
+  }
+
+  async evaluateScenarioSession(params: {
+    scenarioPreset: string;
+    topic: string;
+    dialogueHistory: { role: 'user' | 'assistant'; text: string }[];
+    targetVocabulary: import('./ai-provider.interface.js').ScenarioTargetWord[];
+    usedVocabulary: string[];
+    durationSeconds: number;
+  }) {
+    return this.aiProvider.evaluateScenarioSession(params);
+  }
 }
 

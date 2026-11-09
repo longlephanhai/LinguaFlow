@@ -12,6 +12,7 @@ import { WritingPage } from './pages/WritingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { VideoStudyRoomPage } from './pages/VideoStudyRoomPage';
 import { ReaderPage } from './pages/ReaderPage';
+import { ConversationPage } from './pages/ConversationPage';
 import { AppLayout } from './components/layout/AppLayout';
 import './App.css';
 
@@ -30,6 +31,8 @@ function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/vocabulary" element={<VocabularyPage />} />
               <Route path="/reader" element={<ReaderPage />} />
+              <Route path="/conversation" element={<ConversationPage />} />
+              <Route path="/voice" element={<Navigate to="/conversation" replace />} />
               <Route path="/flashcards" element={<FlashcardPage />} />
               <Route path="/review" element={<Navigate to="/flashcards" replace />} />
               <Route path="/quiz" element={<QuizPage />} />
