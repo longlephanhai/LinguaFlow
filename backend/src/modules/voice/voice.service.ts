@@ -68,7 +68,8 @@ export class VoiceService {
     const targetCount = dto.targetWordsCount || 5;
 
     // 1. Fetch due items from SRS
-    const dueItems = await this.reviewService.getDueOccurrences(userId);
+    const dueResult = await this.reviewService.getDueOccurrences(userId);
+    const dueItems = dueResult?.occurrences || [];
     const targetVocabulary: { id: string; lemma: string; meaning: string; vocabularyItemId?: Types.ObjectId }[] = [];
     const seenLemmas = new Set<string>();
 
@@ -414,3 +415,4 @@ export class VoiceService {
     return { success: true };
   }
 }
+

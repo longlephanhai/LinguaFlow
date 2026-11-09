@@ -46,10 +46,12 @@ describe('VoiceService', () => {
 
   describe('startSession', () => {
     it('initializes a scenario conversation with due SRS words and initial greeting', async () => {
-      mockReviewService.getDueOccurrences.mockResolvedValue([
-        { occurrenceId: 'occ_1', lemma: 'scale', meaning: 'expand in size' },
-        { occurrenceId: 'occ_2', lemma: 'ubiquitous', meaning: 'present everywhere' },
-      ]);
+      mockReviewService.getDueOccurrences.mockResolvedValue({
+        occurrences: [
+          { occurrenceId: 'occ_1', lemma: 'scale', meaning: 'expand in size' },
+          { occurrenceId: 'occ_2', lemma: 'ubiquitous', meaning: 'present everywhere' },
+        ],
+      });
 
       mockAiService.generateScenarioGreeting.mockResolvedValue(
         'Hi there! Welcome to the cafe. What can I get started for you today?',
@@ -80,7 +82,7 @@ describe('VoiceService', () => {
     });
 
     it('supplements with default scenario words if user bank has zero vocabulary', async () => {
-      mockReviewService.getDueOccurrences.mockResolvedValue([]);
+      mockReviewService.getDueOccurrences.mockResolvedValue({ occurrences: [] });
       mockVocabularyItemModel.find.mockReturnValue({
         limit: vi.fn().mockReturnValue({
           exec: vi.fn().mockResolvedValue([]),
@@ -238,3 +240,4 @@ describe('VoiceService', () => {
     });
   });
 });
+
