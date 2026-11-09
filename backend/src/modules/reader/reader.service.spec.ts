@@ -215,7 +215,9 @@ describe('ReaderService', () => {
 
       mockDocumentModel.findOne.mockResolvedValue(mockDoc);
       mockVocabularyService.saveOccurrence.mockResolvedValue({
-        occurrence: { _id: new Types.ObjectId() },
+        occurrenceId: new Types.ObjectId().toString(),
+        vocabularyItemId: new Types.ObjectId().toString(),
+        meaningId: new Types.ObjectId().toString(),
       });
 
       const result = await service.batchSaveVocabulary(

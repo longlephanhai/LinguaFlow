@@ -202,7 +202,7 @@ export class ReaderService {
         },
         userId,
       );
-      occurrences.push({ id: saved.occurrence._id.toString(), lemma: item.lemma });
+      occurrences.push({ id: saved.occurrenceId, lemma: item.lemma });
 
       // Mark as isSaved in discoveredVocabulary if lemma matches
       const match = doc.discoveredVocabulary.find(
