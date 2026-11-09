@@ -120,6 +120,8 @@ export function ConversationPage() {
   const [speechSupported, setSpeechSupported] = useState<boolean>(true);
   const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
   const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef<boolean>(false);
+  const accumulatedTranscriptRef = useRef<string>('');
 
   // Modals & Drawers
   const [summaryOpened, { open: openSummary, close: closeSummary }] = useDisclosure(false);
@@ -153,22 +155,55 @@ export function ConversationPage() {
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.continuous = true;
+        recognition.interimResults = true;
         recognition.lang = 'en-US';
 
         recognition.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          setUserInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
-          setIsListening(false);
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const piece = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += piece;
+            } else {
+              interimTranscript += piece;
+            }
+          }
+
+          if (finalTranscript) {
+            accumulatedTranscriptRef.current += (accumulatedTranscriptRef.current ? ' ' : '') + finalTranscript.trim();
+          }
+
+          const combined = accumulatedTranscriptRef.current
+            ? accumulatedTranscriptRef.current + (interimTranscript ? ' ' + interimTranscript.trim() : '')
+            : interimTranscript.trim();
+
+          setUserInput(combined);
         };
 
-        recognition.onerror = () => {
+        recognition.onerror = (event: any) => {
+          // Ignore silence / no-speech so brief pauses do not abort recording
+          if (event.error === 'no-speech') {
+            return;
+          }
+          isListeningRef.current = false;
           setIsListening(false);
         };
 
         recognition.onend = () => {
-          setIsListening(false);
+          // If user hasn't explicitly stopped, keep listening continuously
+          if (isListeningRef.current) {
+            try {
+              recognition.start();
+            } catch {
+              isListeningRef.current = false;
+              setIsListening(false);
+            }
+          } else {
+            setIsListening(false);
+          }
         };
 
         recognitionRef.current = recognition;
@@ -206,13 +241,21 @@ export function ConversationPage() {
   const toggleListening = () => {
     if (!speechSupported || !recognitionRef.current) return;
     if (isListening) {
-      recognitionRef.current.stop();
+      isListeningRef.current = false;
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore
+      }
       setIsListening(false);
     } else {
+      accumulatedTranscriptRef.current = userInput.trim();
+      isListeningRef.current = true;
+      setIsListening(true);
       try {
         recognitionRef.current.start();
-        setIsListening(true);
       } catch {
+        isListeningRef.current = false;
         setIsListening(false);
       }
     }
@@ -261,6 +304,16 @@ export function ConversationPage() {
   // Send Turn
   const handleSendTurn = async () => {
     if (!activeSessionId || !userInput.trim() || isAiResponding) return;
+
+    if (isListeningRef.current) {
+      isListeningRef.current = false;
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // Ignore
+      }
+      setIsListening(false);
+    }
 
     const textToSend = userInput.trim();
     setUserInput('');
@@ -331,6 +384,17 @@ export function ConversationPage() {
   // End Session
   const handleEndSession = async () => {
     if (!activeSessionId) return;
+
+    if (isListeningRef.current) {
+      isListeningRef.current = false;
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // Ignore
+      }
+      setIsListening(false);
+    }
+
     try {
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -817,12 +881,30 @@ export function ConversationPage() {
                 )}
 
                 {isListening && (
-                  <Group justify="center" gap="xs">
-                    <Loader size="xs" color="red" />
-                    <Text size="xs" c="red" fw={500}>
-                      Đang thu âm... Nói tự nhiên vào microphone
-                    </Text>
-                  </Group>
+                  <Paper
+                    p="xs"
+                    radius="sm"
+                    bg="red.0"
+                    withBorder
+                    style={{ borderColor: 'var(--mantine-color-red-4)' }}
+                  >
+                    <Group justify="space-between">
+                      <Group gap="xs">
+                        <Loader size="xs" color="red" />
+                        <Text size="xs" c="red.8" fw={600}>
+                          Micro đang mở liên tục: Bạn có thể ngập ngừng suy nghĩ, nói nhiều câu tùy ý.
+                        </Text>
+                      </Group>
+                      <Button
+                        size="compact-xs"
+                        color="red"
+                        variant="filled"
+                        onClick={toggleListening}
+                      >
+                        Nói xong (Dừng)
+                      </Button>
+                    </Group>
+                  </Paper>
                 )}
 
                 <Group gap="xs">
