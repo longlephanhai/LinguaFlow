@@ -45,6 +45,7 @@ All functional requirements are classified into four priority tiers:
 | **P1 — MVP Enrichment** | Enriches textual learning loop and retention tracking. (Completed) | Quiz, AI Chat, Writing Review, Dashboard & Settings |
 | **P2 — Media & Multimodal** | Transforms video consumption into active listening and speaking practice. (Completed) | Video Dual Subtitles & Overlay, Dictation Practice, Shadowing & AI Voice Assessment, Web Video Study Room, Multi-modal Flashcards |
 | **P3 — Academic Mastery & Voice Immersion (Advanced Roadmap)** | Bridges the competitive gap with market leaders (OpenQuiz) by enabling real-time voice conversations, IELTS/CEFR academic rubrics, document/PDF vocabulary ingestion, and PWA mobile access. | Real-Time AI Voice Call, Standardized IELTS/CEFR Rubrics (Writing & Speaking), Document/PDF Ingestion & CEFR Profiling, Progressive Web App (PWA) |
+| **P3+ / Experimental — Spatial Cognition & 3D Interactive Lab (Future Backlog)** | Solves conceptual confusion around directional verbs and movement prepositions through interactive 3D spatial simulations. | 3D Spatial Preposition & Action Sandbox, 3D Directional Motion Quizzes |
 
 > **Rule:** All P0, P1, and P2 features must remain green across all test suites as P3 development proceeds.
 
@@ -445,6 +446,16 @@ flowchart TD
 - _AC-1:_ Manifest and Service Worker support "Add to Home Screen" on iOS Safari and Android Chrome with custom app icon and splash screen.
 - _AC-2:_ Local caching of due review flashcards allowing uninterrupted SRS review during intermittent connectivity.
 - _AC-3:_ Background sync queues SM-2 review results and synchronizes to MongoDB when connection restores.
+
+### 6.18 3D Spatial Preposition & Action Sandbox (Visual Cognition) — P3+ / Future Backlog
+
+**FR-3D-001: 3D Spatial Preposition & Motion Visualization**
+- Interactive 3D physical sandbox demonstrating vector trajectories and physical relationships for prepositions of movement and directional phrasal verbs (*walk along, walk across, walk into, walk through, walk past, jump over, crawl under*).
+- _AC-1:_ Vocabulary items / meanings tagged with `#preposition-of-movement` or `#directional-verb` display an interactive "3D Spatial Demo" action badge on Flashcards and Vocabulary Details modal.
+- _AC-2:_ 3D stage renders a low-poly character and environmental props (road, house, tunnel, wall, bridge). Plays seamless walking/jumping locomotion along exact $(x, y, z)$ spatial vectors relative to props.
+- _AC-3:_ Interactive camera controls (orbit 360°, pan, zoom) with Play / Pause / Replay controls and playback speed slider (0.5x, 1x).
+- _AC-4 (3D Interactive Quiz):_ Generates visual spatial recognition quizzes where learners observe a 3D character motion snippet and identify the correct preposition/phrasal verb from 4 options.
+- _Note (Tech Stack):_ Built using `@react-three/fiber` (Three.js) or Spline runtime with low-poly assets and Mixamo locomotion keyframes to minimize client bundle overhead. Scheduled post-MVP as an experimental enhancement.
 
 ## 7. Edge Cases & Error Handling (EDGE)
 
