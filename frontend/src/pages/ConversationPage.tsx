@@ -39,12 +39,10 @@ import {
   IconMessageCircle2,
   IconBriefcase,
   IconPlus,
-  IconArrowRight,
-  IconRefresh,
   IconTrash,
 } from '@tabler/icons-react';
-import {
-  voiceApi,
+import { voiceApi } from '../lib/voice.api';
+import type {
   ScenarioTargetWord,
   DialogueTurn,
   VoiceSessionHistoryItem,
