@@ -15,3 +15,4 @@ export class QueryArticlesDto {
   @Max(50)
   limit: number = 10;
 }
+

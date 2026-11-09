@@ -19,3 +19,4 @@ import { VocabularyModule } from '../vocabulary/vocabulary.module.js';
   exports: [ReaderService],
 })
 export class ReaderModule {}
+

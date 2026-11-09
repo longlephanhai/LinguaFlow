@@ -17,3 +17,4 @@ export class ParseArticleDto {
   @MaxLength(1000)
   sourceUrl?: string;
 }
+

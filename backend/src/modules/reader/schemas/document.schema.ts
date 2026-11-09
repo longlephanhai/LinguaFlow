@@ -58,3 +58,4 @@ export class DocumentRecord {
 
 export const DocumentRecordSchema = SchemaFactory.createForClass(DocumentRecord);
 DocumentRecordSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 });
+
