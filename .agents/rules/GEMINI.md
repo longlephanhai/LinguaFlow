@@ -10,3 +10,4 @@ Before executing any task, always reference and strictly adhere to the authorita
 2. **Data Model & Mongoose Schemas:** Read and enforce `@docs/DATA-SCHEMA.md` (NEVER flatten the 3-layer structure).
 3. **API Contracts & DTOs:** Read and match `@docs/API-CONTRACTS.md`.
 4. **Architecture & AI Boundaries:** Read `@docs/ARCHITECTURE.md` (all AI calls must go through `AiModule`).
+5. **Git & Commit Boundaries:** NEVER automatically run `git commit` or create git commits without explicit instruction and confirmation from the user. Keep changes uncommitted in the working tree for the user to review.

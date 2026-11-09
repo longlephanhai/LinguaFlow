@@ -27,5 +27,5 @@ When performing git operations and creating commits:
    - Use lowercase, imperative mood (e.g., `fix(auth): handle token refresh 401 error`).
 
 4. **Execution Boundaries:**
-   - Run `git commit -m "..."`.
+   - Only execute `git commit` when explicitly instructed and approved by the user after they have reviewed the changes. Never commit autonomously.
    - Never run `git push` unless explicitly instructed by the user.
