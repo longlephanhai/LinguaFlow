@@ -66,6 +66,7 @@ export class VoiceService {
     const scenarioPreset = dto.scenarioPreset || 'casual_chat';
     const topic = dto.topic || PRESET_TOPIC_MAP[scenarioPreset] || 'Everyday Conversation';
     const targetCount = dto.targetWordsCount || 5;
+    const proficiencyLevel = dto.proficiencyLevel || 'a1_a2';
 
     // 1. Fetch due items from SRS
     const dueResult = await this.reviewService.getDueOccurrences(userId);
@@ -126,10 +127,11 @@ export class VoiceService {
     }
 
     // 4. Generate scenario greeting via AI
-    const greeting = await this.aiService.generateScenarioGreeting(
+    const greetingResult = await this.aiService.generateScenarioGreeting(
       scenarioPreset,
       topic,
       targetVocabulary.map((t) => ({ id: t.id, lemma: t.lemma, meaning: t.meaning })),
+      proficiencyLevel,
     );
 
     // 5. Create voice session record
@@ -141,6 +143,7 @@ export class VoiceService {
       userId: userObjId,
       scenarioPreset,
       topic,
+      proficiencyLevel,
       durationSeconds: 0,
       targetVocabularyItemIds,
       usedVocabularyItemIds: [],
@@ -152,10 +155,12 @@ export class VoiceService {
       dialogueHistory: [
         {
           role: 'assistant',
-          text: greeting,
+          text: greetingResult.greeting,
           timestamp: new Date(),
           detectedTargetWords: [],
           phrasingFeedback: null,
+          vietnameseTranslation: greetingResult.vietnameseTranslation || null,
+          quickReplies: greetingResult.quickReplies || [],
         },
       ],
       spokenMetrics: {
@@ -175,7 +180,9 @@ export class VoiceService {
       sessionId: session._id.toString(),
       scenario: topic,
       targetVocabulary: session.targetVocabulary,
-      initialGreeting: greeting,
+      initialGreeting: greetingResult.greeting,
+      initialGreetingTranslation: greetingResult.vietnameseTranslation,
+      quickReplies: greetingResult.quickReplies || [],
     };
   }
 
@@ -206,6 +213,7 @@ export class VoiceService {
         text: d.text,
       })),
       userTranscript: dto.userTranscript,
+      proficiencyLevel: session.proficiencyLevel || 'a1_a2',
     });
 
     // Record user turn
@@ -224,6 +232,8 @@ export class VoiceService {
       timestamp: new Date(),
       detectedTargetWords: [],
       phrasingFeedback: null,
+      vietnameseTranslation: turnResult.vietnameseTranslation || null,
+      quickReplies: turnResult.quickReplies || [],
     });
 
     // Calculate remaining target words
@@ -242,9 +252,11 @@ export class VoiceService {
 
     return {
       assistantText: turnResult.assistantText,
+      vietnameseTranslation: turnResult.vietnameseTranslation,
       detectedTargetWords: turnResult.detectedTargetWords,
       phrasingFeedback: turnResult.phrasingFeedback,
       targetWordsRemaining,
+      quickReplies: turnResult.quickReplies || [],
     };
   }
 

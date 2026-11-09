@@ -14,6 +14,8 @@ export interface DialogueTurn {
   timestamp?: string;
   detectedTargetWords?: string[];
   phrasingFeedback?: string | null;
+  vietnameseTranslation?: string | null;
+  quickReplies?: string[];
 }
 
 export interface SpokenMetrics {
@@ -28,6 +30,7 @@ export interface StartVoiceSessionRequest {
   scenarioPreset?: string;
   topic?: string;
   targetWordsCount?: number;
+  proficiencyLevel?: 'a1_a2' | 'b1_b2' | 'c1';
 }
 
 export interface StartVoiceSessionResponse {
@@ -35,6 +38,8 @@ export interface StartVoiceSessionResponse {
   scenario: string;
   targetVocabulary: ScenarioTargetWord[];
   initialGreeting: string;
+  initialGreetingTranslation?: string;
+  quickReplies?: string[];
 }
 
 export interface VoiceTurnRequest {
@@ -45,9 +50,11 @@ export interface VoiceTurnRequest {
 
 export interface VoiceTurnResponse {
   assistantText: string;
+  vietnameseTranslation?: string;
   detectedTargetWords: string[];
   phrasingFeedback: string | null;
   targetWordsRemaining: string[];
+  quickReplies?: string[];
 }
 
 export interface EndVoiceSessionRequest {

@@ -12,6 +12,7 @@ import {
   SpeechEvaluationResult,
   DiscoveredVocabularyItem,
   ScenarioTargetWord,
+  ScenarioGreetingResult,
   ScenarioTurnResult,
   ScenarioSessionSummaryResult,
 } from './ai-provider.interface.js';
@@ -722,25 +723,46 @@ ${truncated}
     scenarioPreset: string,
     topic?: string,
     targetVocabulary?: ScenarioTargetWord[],
-  ): Promise<string> {
+    proficiencyLevel: string = 'a1_a2',
+  ): Promise<ScenarioGreetingResult> {
     const client = this.client || this.initClient();
     if (!client) {
-      return this.fallbackScenarioGreeting(scenarioPreset);
+      return this.fallbackScenarioGreeting(scenarioPreset, proficiencyLevel);
     }
 
     const vocabList = targetVocabulary?.map((v) => `${v.lemma} (${v.meaning})`).join(', ') || 'none';
+    const isBeginner = proficiencyLevel === 'a1_a2';
+
+    const levelGuideline = isBeginner
+      ? `LEVEL REQUIREMENT (CRITICAL - CEFR A1-A2 Beginner):
+- Use very simple, everyday English words.
+- Keep the greeting under 15 words total.
+- Ask ONLY ONE very simple, direct question (e.g. "What would you like to drink?").
+- Do NOT use complex grammar (no present perfect continuous, no idioms, no double questions).`
+      : `LEVEL REQUIREMENT (CEFR B1-C1 Intermediate/Advanced):
+- Use natural, authentic conversational English with common phrasal verbs.
+- Ask an engaging open-ended question.`;
+
     const prompt = `
 You are roleplaying a friendly native speaker in a practical everyday English scenario.
 Scenario preset: ${scenarioPreset}
 Topic / Setting: ${topic || scenarioPreset}
-Target vocabulary to naturally prompt during this conversation: ${vocabList}
+Target vocabulary to naturally prompt: ${vocabList}
+Learner level: ${proficiencyLevel}
+
+${levelGuideline}
 
 Instructions:
-1. Provide a warm, natural, and authentic 1-2 sentence opening greeting as your character.
-2. Ask an engaging open-ended question to invite the learner to speak.
-3. Keep it conversational and natural. Do NOT output quotes, prefixes, or stage directions.
+1. "greeting": Friendly, natural opening greeting (1-2 sentences) in English matching the level constraint.
+2. "vietnameseTranslation": Accurate, natural Vietnamese translation of the greeting.
+3. "quickReplies": 2-3 short, easy sample sentence responses in English that the learner can say in response.
 
-Greeting:
+Respond ONLY with valid JSON:
+{
+  "greeting": "...",
+  "vietnameseTranslation": "...",
+  "quickReplies": ["...", "..."]
+}
 `.trim();
 
     try {
@@ -748,29 +770,112 @@ Greeting:
         model: this.primaryModel,
         contents: prompt,
         config: {
-          temperature: 0.7,
+          temperature: 0.6,
+          responseMimeType: 'application/json',
         },
       });
 
-      const text = response.text?.trim();
-      return text || this.fallbackScenarioGreeting(scenarioPreset);
+      const responseText = response.text?.trim() || '{}';
+      const parsed = JSON.parse(responseText);
+
+      if (parsed.greeting) {
+        return {
+          greeting: parsed.greeting,
+          vietnameseTranslation: parsed.vietnameseTranslation || '',
+          quickReplies: Array.isArray(parsed.quickReplies) ? parsed.quickReplies.map(String) : [],
+        };
+      }
+      return this.fallbackScenarioGreeting(scenarioPreset, proficiencyLevel);
     } catch (err) {
       this.logger.warn(`Gemini generateScenarioGreeting failed, using fallback: ${err}`);
-      return this.fallbackScenarioGreeting(scenarioPreset);
+      return this.fallbackScenarioGreeting(scenarioPreset, proficiencyLevel);
     }
   }
 
-  private fallbackScenarioGreeting(scenarioPreset: string): string {
+  private fallbackScenarioGreeting(scenarioPreset: string, level: string = 'a1_a2'): ScenarioGreetingResult {
+    const isBeginner = level === 'a1_a2';
+
     switch (scenarioPreset) {
       case 'coffee_shop':
-        return 'Hi there! Welcome to the cafe. What can I get started for you today?';
+        return isBeginner
+          ? {
+              greeting: 'Hi! Welcome to the coffee shop. What drink would you like today?',
+              vietnameseTranslation: 'Chào bạn! Chào mừng đến quán cà phê. Bạn muốn dùng đồ uống gì hôm nay?',
+              quickReplies: [
+                'I would like an iced latte, please.',
+                'Can I have a hot black coffee?',
+                'Do you have decaf coffee?',
+              ],
+            }
+          : {
+              greeting: 'Hi there! Welcome to the cafe. What can I get started for you today?',
+              vietnameseTranslation: 'Chào bạn! Chào mừng đến quán cà phê. Tôi có thể chuẩn bị món gì cho bạn hôm nay?',
+              quickReplies: [
+                'Could I get a large iced latte with oat milk?',
+                'What single-origin coffees do you have on drip today?',
+              ],
+            };
+
       case 'hotel_travel':
-        return 'Good afternoon! Welcome to the Grand View Hotel. How can I assist you with your stay today?';
+        return isBeginner
+          ? {
+              greeting: 'Hello! Welcome to our hotel. Can I have your name and booking, please?',
+              vietnameseTranslation: 'Xin chào! Chào mừng đến khách sạn của chúng tôi. Cho tôi xin tên và thông tin đặt phòng của bạn nhé?',
+              quickReplies: [
+                'Hi, I have a reservation under John.',
+                'What time is breakfast tomorrow?',
+                'Can you help me with my luggage?',
+              ],
+            }
+          : {
+              greeting: 'Good afternoon! Welcome to the Grand View Hotel. How can I assist you with your stay today?',
+              vietnameseTranslation: 'Chào buổi chiều! Chào mừng đến Khách sạn Grand View. Tôi có thể giúp gì cho kỳ nghỉ của bạn hôm nay?',
+              quickReplies: [
+                'Hi, checking in for a two-night reservation under David.',
+                'Could you tell me about the complimentary amenities and shuttle schedule?',
+              ],
+            };
+
       case 'job_interview':
-        return 'Hello and welcome! Thank you for meeting with me today. Could you tell me a little bit about yourself and your background?';
+        return isBeginner
+          ? {
+              greeting: 'Hello! Welcome. Thank you for coming today. How are you feeling?',
+              vietnameseTranslation: 'Xin chào! Chào mừng bạn. Cảm ơn bạn đã đến hôm nay. Bạn cảm thấy thế nào?',
+              quickReplies: [
+                "I'm feeling good, thank you!",
+                'A little nervous, but excited to be here.',
+                'Thank you for having me today.',
+              ],
+            }
+          : {
+              greeting: 'Hello and welcome! Thank you for meeting with me today. Could you tell me a little bit about yourself and your background?',
+              vietnameseTranslation: 'Xin chào và hoan nghênh bạn! Cảm ơn bạn đã tham gia buổi phỏng vấn hôm nay. Bạn có thể chia sẻ đôi nét về bản thân và kinh nghiệm của mình không?',
+              quickReplies: [
+                "Certainly! I've spent the past few years working in web development.",
+                'Thank you. I have experience collaborating on agile cross-functional projects.',
+              ],
+            };
+
       case 'casual_chat':
       default:
-        return "Hey! It's so good to catch up with you. How has your day been going so far?";
+        return isBeginner
+          ? {
+              greeting: 'Hi! So happy to see you. How are you doing today?',
+              vietnameseTranslation: 'Chào bạn! Rất vui được gặp bạn. Hôm nay bạn thế nào?',
+              quickReplies: [
+                "I'm doing well, how about you?",
+                'I had a busy day, but I am good.',
+                'Not bad! Just relaxing at home.',
+              ],
+            }
+          : {
+              greeting: "Hey! It's so good to catch up with you. How has your day been going so far?",
+              vietnameseTranslation: 'Chào bạn! Thật vui được trò chuyện với bạn. Ngày hôm nay của bạn thế nào rồi?',
+              quickReplies: [
+                'Pretty good, thanks! Just wrapped up a hectic work week.',
+                'Not too bad! Excited to unwind this weekend.',
+              ],
+            };
     }
   }
 
@@ -781,13 +886,15 @@ Greeting:
     usedVocabulary: string[];
     history: { role: 'user' | 'assistant'; text: string }[];
     userTranscript: string;
+    proficiencyLevel?: string;
   }): Promise<ScenarioTurnResult> {
-    const { scenarioPreset, topic, targetVocabulary, usedVocabulary, history, userTranscript } = params;
+    const { scenarioPreset, topic, targetVocabulary, usedVocabulary, history, userTranscript, proficiencyLevel = 'a1_a2' } = params;
     const client = this.client || this.initClient();
     if (!client) {
-      return this.fallbackScenarioTurn(targetVocabulary, usedVocabulary, userTranscript);
+      return this.fallbackScenarioTurn(targetVocabulary, usedVocabulary, userTranscript, proficiencyLevel);
     }
 
+    const isBeginner = proficiencyLevel === 'a1_a2';
     const remainingVocab = targetVocabulary
       .filter((v) => !usedVocabulary.map((u) => u.toLowerCase()).includes(v.lemma.toLowerCase()))
       .map((v) => `${v.lemma} (${v.meaning})`)
@@ -798,26 +905,44 @@ Greeting:
       .map((h) => `${h.role === 'user' ? 'Learner' : 'Assistant'}: ${h.text}`)
       .join('\n');
 
+    const levelGuideline = isBeginner
+      ? `LEARNER PROFICIENCY (CEFR A1-A2 Beginner):
+- Keep your reply simple, encouraging, and under 15 words.
+- Ask ONLY ONE straightforward, direct question. Never ask multiple questions.
+- Use basic vocabulary and simple present / past tenses.
+- Provide "quickReplies": 2-3 short, easy suggested answers (under 8 words each) the beginner can use next.`
+      : `LEARNER PROFICIENCY (CEFR B1-C1 Intermediate/Advanced):
+- Converse naturally in 1-3 sentences with authentic phrasing.
+- If appropriate, subtly prompt one of the remaining target words.
+- Provide "quickReplies": 2 suggested natural responses.`;
+
     const prompt = `
 You are a supportive native English conversation partner in an everyday scenario.
 Scenario: ${scenarioPreset} - ${topic}
+Learner level: ${proficiencyLevel}
 Target vocabulary the learner is practicing: ${targetVocabulary.map((v) => v.lemma).join(', ')}
 Remaining target words to naturally elicit: ${remainingVocab || 'all practiced'}
+
+${levelGuideline}
 
 Recent dialogue:
 ${recentHistory}
 Learner just said: "${userTranscript}"
 
 Instructions:
-1. "assistantText": Respond naturally and concisely in 1-3 sentences in English. Stay strictly in character. If appropriate, casually steer the conversation or ask a question that naturally prompts one of the remaining target words.
-2. "detectedTargetWords": Inspect the learner's utterance ("${userTranscript}") and check if they used any of the target words (matching lemmas or inflected forms like scale, scaled, scaling). Return an array of lemmas (e.g. ["scale"]).
-3. "phrasingFeedback": If the learner's phrasing had unnatural wording, subtle grammar issues, or awkward phrasing, provide 1 short, warm, constructive recommendation starting with "A native speaker might say: ...". If their sentence was natural and clear, set this to null. Never give exam band scores.
+1. "assistantText": Respond naturally and concisely in English matching the level constraint.
+2. "vietnameseTranslation": Natural Vietnamese translation of your response.
+3. "detectedTargetWords": Inspect the learner's utterance ("${userTranscript}") and check if they used any of the target words (matching lemmas or inflected forms like scale, scaled, scaling). Return an array of lemmas (e.g. ["scale"]).
+4. "phrasingFeedback": If the learner's phrasing had unnatural wording or errors, provide 1 short, warm, constructive recommendation starting with "A native speaker might say: ...". If their sentence was fine, set this to null.
+5. "quickReplies": 2-3 short, easy sample sentence responses in English the learner can say next.
 
 Respond ONLY with valid JSON:
 {
   "assistantText": "...",
+  "vietnameseTranslation": "...",
   "detectedTargetWords": [],
-  "phrasingFeedback": null
+  "phrasingFeedback": null,
+  "quickReplies": ["...", "..."]
 }
 `.trim();
 
@@ -847,13 +972,15 @@ Respond ONLY with valid JSON:
       );
 
       return {
-        assistantText: parsed.assistantText || "That's interesting! Tell me more about that.",
+        assistantText: parsed.assistantText || "That's great! Tell me a bit more.",
+        vietnameseTranslation: parsed.vietnameseTranslation || '',
         detectedTargetWords: combinedDetected,
         phrasingFeedback: parsed.phrasingFeedback || null,
+        quickReplies: Array.isArray(parsed.quickReplies) ? parsed.quickReplies.map(String) : [],
       };
     } catch (err) {
       this.logger.warn(`Gemini scenarioTurn failed, using fallback: ${err}`);
-      return this.fallbackScenarioTurn(targetVocabulary, usedVocabulary, userTranscript);
+      return this.fallbackScenarioTurn(targetVocabulary, usedVocabulary, userTranscript, proficiencyLevel);
     }
   }
 
@@ -861,6 +988,7 @@ Respond ONLY with valid JSON:
     targetVocabulary: ScenarioTargetWord[],
     usedVocabulary: string[],
     userTranscript: string,
+    level: string = 'a1_a2',
   ): ScenarioTurnResult {
     const detected: string[] = [];
     for (const item of targetVocabulary) {
@@ -870,11 +998,22 @@ Respond ONLY with valid JSON:
       }
     }
 
-    return {
-      assistantText: "That makes total sense! Could you tell me a bit more about what you have in mind?",
-      detectedTargetWords: detected,
-      phrasingFeedback: null,
-    };
+    const isBeginner = level === 'a1_a2';
+    return isBeginner
+      ? {
+          assistantText: 'That sounds nice! Do you like to do that often?',
+          vietnameseTranslation: 'Nghe hay đấy! Bạn có thường thích làm việc đó không?',
+          detectedTargetWords: detected,
+          phrasingFeedback: null,
+          quickReplies: ['Yes, I do it every week.', 'No, only sometimes.', 'Not very often.'],
+        }
+      : {
+          assistantText: 'That makes total sense! Could you tell me a bit more about what you have in mind?',
+          vietnameseTranslation: 'Điều đó hoàn toàn hợp lý! Bạn có thể chia sẻ thêm về dự định của mình không?',
+          detectedTargetWords: detected,
+          phrasingFeedback: null,
+          quickReplies: ['Sure, I was thinking about...', 'Actually, let me explain.'],
+        };
   }
 
   async evaluateScenarioSession(params: {

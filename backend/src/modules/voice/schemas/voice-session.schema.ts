@@ -32,7 +32,13 @@ export class DialogueTurn {
   detectedTargetWords: string[];
 
   @Prop({ type: String, default: null })
-  phrasingFeedback: string | null;
+  phrasingFeedback?: string | null;
+
+  @Prop({ type: String, default: null })
+  vietnameseTranslation?: string | null;
+
+  @Prop({ type: [String], default: [] })
+  quickReplies?: string[];
 }
 
 export const DialogueTurnSchema = SchemaFactory.createForClass(DialogueTurn);
@@ -67,6 +73,9 @@ export class VoiceSession {
 
   @Prop({ type: String, default: 'Everyday Conversation', trim: true })
   topic: string;
+
+  @Prop({ type: String, enum: ['a1_a2', 'b1_b2', 'c1'], default: 'a1_a2' })
+  proficiencyLevel: string;
 
   @Prop({ type: Number, default: 0 })
   durationSeconds: number;
@@ -105,3 +114,4 @@ export class VoiceSession {
 export const VoiceSessionSchema = SchemaFactory.createForClass(VoiceSession);
 
 VoiceSessionSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 });
+

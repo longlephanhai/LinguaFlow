@@ -53,9 +53,11 @@ describe('VoiceService', () => {
         ],
       });
 
-      mockAiService.generateScenarioGreeting.mockResolvedValue(
-        'Hi there! Welcome to the cafe. What can I get started for you today?',
-      );
+      mockAiService.generateScenarioGreeting.mockResolvedValue({
+        greeting: 'Hi there! Welcome to the cafe. What can I get started for you today?',
+        vietnameseTranslation: 'Chào bạn! Chào mừng đến quán cà phê.',
+        quickReplies: ['I would like an iced latte, please.'],
+      });
 
       const fakeSession = {
         _id: new Types.ObjectId(sessionId),
@@ -89,7 +91,11 @@ describe('VoiceService', () => {
         }),
       });
 
-      mockAiService.generateScenarioGreeting.mockResolvedValue('Welcome! What can I get for you?');
+      mockAiService.generateScenarioGreeting.mockResolvedValue({
+        greeting: 'Welcome! What can I get for you?',
+        vietnameseTranslation: 'Chào bạn! Tôi có thể lấy gì cho bạn?',
+        quickReplies: [],
+      });
       mockVoiceSessionModel.create.mockImplementation((data) => ({
         _id: new Types.ObjectId(sessionId),
         ...data,

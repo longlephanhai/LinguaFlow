@@ -93,8 +93,9 @@ export class AiService {
     scenarioPreset: string,
     topic?: string,
     targetVocabulary?: import('./ai-provider.interface.js').ScenarioTargetWord[],
+    proficiencyLevel?: string,
   ) {
-    return this.aiProvider.generateScenarioGreeting(scenarioPreset, topic, targetVocabulary);
+    return this.aiProvider.generateScenarioGreeting(scenarioPreset, topic, targetVocabulary, proficiencyLevel);
   }
 
   async scenarioTurn(params: {
@@ -104,6 +105,7 @@ export class AiService {
     usedVocabulary: string[];
     history: { role: 'user' | 'assistant'; text: string }[];
     userTranscript: string;
+    proficiencyLevel?: string;
   }) {
     return this.aiProvider.scenarioTurn(params);
   }

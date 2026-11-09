@@ -15,3 +15,4 @@ export class QueryVoiceSessionsDto {
   @Max(50)
   limit?: number = 10;
 }
+

@@ -11,9 +11,14 @@ export class StartVoiceSessionDto {
   topic?: string;
 
   @IsOptional()
+  @IsString()
+  proficiencyLevel?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
   @Max(10)
   targetWordsCount?: number;
 }
+

@@ -25,6 +25,8 @@ describe('ConversationPage', () => {
       { id: 'v-2', lemma: 'pastry', meaning: 'baked sweet item' },
     ],
     initialGreeting: 'Hi there! Welcome to the cafe. What can I get started for you today?',
+    initialGreetingTranslation: 'Chào bạn! Chào mừng đến quán cà phê.',
+    quickReplies: ['I want an iced latte, please.', 'Do you have decaf?'],
   };
 
   beforeEach(() => {
@@ -74,6 +76,12 @@ describe('ConversationPage', () => {
     expect(screen.getByText('Từ Vựng Mục Tiêu')).toBeInTheDocument();
     expect(screen.getByText('decaf')).toBeInTheDocument();
     expect(screen.getByText('pastry')).toBeInTheDocument();
+
+    // Check quick replies rendered and clickable
+    const quickReplyBtn = screen.getByText('I want an iced latte, please.');
+    expect(quickReplyBtn).toBeInTheDocument();
+    fireEvent.click(quickReplyBtn);
+    expect(screen.getByPlaceholderText('Nói hoặc gõ câu trả lời của bạn...')).toHaveValue('I want an iced latte, please.');
   });
 
   it('sends user message, receives AI reply, and updates detected target words', async () => {

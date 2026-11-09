@@ -58,10 +58,18 @@ export interface ScenarioTargetWord {
   meaning: string;
 }
 
+export interface ScenarioGreetingResult {
+  greeting: string;
+  vietnameseTranslation?: string;
+  quickReplies?: string[];
+}
+
 export interface ScenarioTurnResult {
   assistantText: string;
+  vietnameseTranslation?: string;
   detectedTargetWords: string[];
   phrasingFeedback: string | null;
+  quickReplies?: string[];
 }
 
 export interface ScenarioSessionSummaryResult {
@@ -87,7 +95,8 @@ export interface AIProvider {
     scenarioPreset: string,
     topic?: string,
     targetVocabulary?: ScenarioTargetWord[],
-  ): Promise<string>;
+    proficiencyLevel?: string,
+  ): Promise<ScenarioGreetingResult>;
   scenarioTurn(params: {
     scenarioPreset: string;
     topic: string;
@@ -95,6 +104,7 @@ export interface AIProvider {
     usedVocabulary: string[];
     history: { role: 'user' | 'assistant'; text: string }[];
     userTranscript: string;
+    proficiencyLevel?: string;
   }): Promise<ScenarioTurnResult>;
   evaluateScenarioSession(params: {
     scenarioPreset: string;

@@ -21,6 +21,7 @@ import {
   Alert,
   Tooltip,
   Divider,
+  SegmentedControl,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -40,6 +41,7 @@ import {
   IconBriefcase,
   IconPlus,
   IconTrash,
+  IconLanguage,
 } from '@tabler/icons-react';
 import { voiceApi } from '../lib/voice.api';
 import type {
@@ -106,9 +108,12 @@ export function ConversationPage() {
 
   // Setup / Preset Config
   const [selectedPreset, setSelectedPreset] = useState<string>('coffee_shop');
+  const [proficiencyLevel, setProficiencyLevel] = useState<'a1_a2' | 'b1_b2' | 'c1'>('a1_a2');
   const [customTopic, setCustomTopic] = useState<string>('');
   const [targetCount, setTargetCount] = useState<number>(5);
   const [isStarting, setIsStarting] = useState<boolean>(false);
+  const [quickReplies, setQuickReplies] = useState<string[]>([]);
+  const [revealedTranslations, setRevealedTranslations] = useState<Record<number, boolean>>({});
 
   // Voice & Audio
   const [isListening, setIsListening] = useState<boolean>(false);
@@ -225,6 +230,7 @@ export function ConversationPage() {
         scenarioPreset: preset,
         topic,
         targetWordsCount: targetCount,
+        proficiencyLevel,
       });
 
       setActiveSessionId(data.sessionId);
@@ -232,11 +238,15 @@ export function ConversationPage() {
       setTargetVocabulary(data.targetVocabulary);
       setUsedWords(new Set());
       setSessionDuration(0);
+      setQuickReplies(data.quickReplies || []);
+      setRevealedTranslations({});
 
       const initialTurn: DialogueTurn = {
         role: 'assistant',
         text: data.initialGreeting,
         timestamp: new Date().toISOString(),
+        vietnameseTranslation: data.initialGreetingTranslation || null,
+        quickReplies: data.quickReplies || [],
       };
       setDialogue([initialTurn]);
 
@@ -295,10 +305,13 @@ export function ConversationPage() {
           role: 'assistant',
           text: response.assistantText,
           timestamp: new Date().toISOString(),
+          vietnameseTranslation: response.vietnameseTranslation || null,
+          quickReplies: response.quickReplies || [],
         });
         return updated;
       });
 
+      setQuickReplies(response.quickReplies || []);
       speakText(response.assistantText);
     } catch (err) {
       console.error('Failed to send turn', err);
@@ -394,6 +407,50 @@ export function ConversationPage() {
 
           <Paper withBorder p="lg" radius="md">
             <Stack gap="md">
+              {/* Proficiency Level Selector */}
+              <Paper withBorder p="sm" radius="md" bg="var(--mantine-color-gray-0)">
+                <Group justify="space-between" mb="xs">
+                  <div>
+                    <Text fw={600} size="sm">
+                      Chọn trình độ đàm thoại của bạn
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      AI sẽ tự động điều chỉnh độ dài câu, từ vựng và câu hỏi để bạn phản xạ tự nhiên nhất
+                    </Text>
+                  </div>
+                  <Badge
+                    size="sm"
+                    color={proficiencyLevel === 'a1_a2' ? 'green' : proficiencyLevel === 'b1_b2' ? 'blue' : 'indigo'}
+                    variant="filled"
+                  >
+                    {proficiencyLevel === 'a1_a2'
+                      ? 'Level A1 - A2 (Cơ bản)'
+                      : proficiencyLevel === 'b1_b2'
+                        ? 'Level B1 - B2 (Trung cấp)'
+                        : 'Level C1 (Nâng cao)'}
+                  </Badge>
+                </Group>
+                <SegmentedControl
+                  value={proficiencyLevel}
+                  onChange={(val) => setProficiencyLevel(val as any)}
+                  fullWidth
+                  data={[
+                    {
+                      value: 'a1_a2',
+                      label: '🟢 A1 - A2: Câu ngắn, hỏi 1 câu, có gợi ý câu mẫu',
+                    },
+                    {
+                      value: 'b1_b2',
+                      label: '🟡 B1 - B2: Hội thoại tự nhiên, phrasal verbs',
+                    },
+                    {
+                      value: 'c1',
+                      label: '🟣 C1: Phản xạ sâu, ngữ cảnh phong phú',
+                    },
+                  ]}
+                />
+              </Paper>
+
               <Group justify="space-between">
                 <div>
                   <Text fw={600} size="md">
@@ -552,6 +609,17 @@ export function ConversationPage() {
                     <Badge size="xs" color="gray" variant="light">
                       Thời lượng: {formatTimer(sessionDuration)}
                     </Badge>
+                    <Badge
+                      size="xs"
+                      color={proficiencyLevel === 'a1_a2' ? 'green' : proficiencyLevel === 'b1_b2' ? 'blue' : 'indigo'}
+                      variant="light"
+                    >
+                      {proficiencyLevel === 'a1_a2'
+                        ? 'Level A1 - A2'
+                        : proficiencyLevel === 'b1_b2'
+                          ? 'Level B1 - B2'
+                          : 'Level C1'}
+                    </Badge>
                     <Badge size="xs" color="teal" variant="light">
                       Kích hoạt từ vựng: {usedWords.size}/{targetVocabulary.length} ({activationPercent}%)
                     </Badge>
@@ -611,14 +679,35 @@ export function ConversationPage() {
                             {isUser ? 'Bạn' : 'AI Partner'}
                           </Text>
                           {!isUser && (
-                            <ActionIcon
-                              size="xs"
-                              variant="subtle"
-                              color="gray"
-                              onClick={() => speakText(turn.text)}
-                            >
-                              <IconVolume size={14} />
-                            </ActionIcon>
+                            <Group gap={4}>
+                              <Tooltip label="Nghe phát âm">
+                                <ActionIcon
+                                  size="xs"
+                                  variant="subtle"
+                                  color="gray"
+                                  onClick={() => speakText(turn.text)}
+                                >
+                                  <IconVolume size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                              {turn.vietnameseTranslation && (
+                                <Tooltip label={revealedTranslations[idx] ? 'Ẩn bản dịch' : 'Dịch câu này sang tiếng Việt'}>
+                                  <ActionIcon
+                                    size="xs"
+                                    variant={revealedTranslations[idx] ? 'filled' : 'subtle'}
+                                    color={revealedTranslations[idx] ? 'teal' : 'gray'}
+                                    onClick={() =>
+                                      setRevealedTranslations((prev) => ({
+                                        ...prev,
+                                        [idx]: !prev[idx],
+                                      }))
+                                    }
+                                  >
+                                    <IconLanguage size={14} />
+                                  </ActionIcon>
+                                </Tooltip>
+                              )}
+                            </Group>
                           )}
                         </Group>
 
@@ -637,6 +726,24 @@ export function ConversationPage() {
                         >
                           <Text size="sm">{turn.text}</Text>
                         </Paper>
+
+                        {/* Assistant Translation Box */}
+                        {!isUser && turn.vietnameseTranslation && revealedTranslations[idx] && (
+                          <Paper
+                            p="xs"
+                            mt={4}
+                            radius="sm"
+                            style={{
+                              backgroundColor: 'var(--mantine-color-teal-0)',
+                              maxWidth: '85%',
+                              borderLeft: '3px solid var(--mantine-color-teal-6)',
+                            }}
+                          >
+                            <Text size="xs" c="teal.9" fs="italic">
+                              🇻🇳 {turn.vietnameseTranslation}
+                            </Text>
+                          </Paper>
+                        )}
 
                         {/* User Detected Words Pills */}
                         {isUser && turn.detectedTargetWords && turn.detectedTargetWords.length > 0 && (
@@ -686,6 +793,29 @@ export function ConversationPage() {
 
               {/* Input Area */}
               <Stack gap="xs">
+                {/* Quick Response Starters (Scaffolding for A1-A2) */}
+                {quickReplies.length > 0 && (
+                  <Paper p="xs" radius="sm" bg="var(--mantine-color-gray-0)" withBorder>
+                    <Group gap="xs" align="center" wrap="wrap">
+                      <Text size="xs" fw={600} c="teal.8">
+                        💡 Gợi ý câu trả lời mẫu:
+                      </Text>
+                      {quickReplies.map((reply, i) => (
+                        <Button
+                          key={i}
+                          size="compact-xs"
+                          variant="light"
+                          color="teal"
+                          radius="xl"
+                          onClick={() => setUserInput(reply)}
+                        >
+                          {reply}
+                        </Button>
+                      ))}
+                    </Group>
+                  </Paper>
+                )}
+
                 {isListening && (
                   <Group justify="center" gap="xs">
                     <Loader size="xs" color="red" />
