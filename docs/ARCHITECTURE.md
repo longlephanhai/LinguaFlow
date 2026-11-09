@@ -166,38 +166,31 @@ linguaflow/
   3. Audio or transcript is submitted to `POST /shadowing/evaluate`.
   4. Backend `ShadowingModule` orchestrates evaluation through `AiModule.evaluateSpeech()`, scoring word stress, omission, and pronunciation accuracy against the reference cue.
 
-## 12. Phase 3 Architecture — Voice Immersion, Academic Rubrics & Document Ingestion
+## 12. Phase 3 Architecture — Authentic Reading, Daily Scenarios & Mobile PWA
 
-### 12.1 Real-Time AI Voice Call Architecture
-- **Duplex Audio Loop:**
-  - Client utilizes Web Audio API / `MediaRecorder` with client-side Voice Activity Detection (VAD) or push-to-talk.
-  - Streaming audio or transcription chunks are dispatched to `POST /chat/voice-session/turn`.
-  - Backend `VoiceSessionService` passes user utterances to `AiModule.conductVoiceDialogue()` with dynamic system constraints:
-    - Injects top 5–10 due vocabulary items into the prompt context.
-    - Guides Gemini to weave target vocabulary into dialogue naturally and probe user responses to elicit usage.
-  - Text responses are converted to speech via high-quality Web Speech Synthesis (`window.speechSynthesis`) or neural TTS API, streaming back to the user with minimal latency (< 1.5s).
-- **Target Vocabulary State Machine:** Client tracks target words in real-time. Upon user speech transcription containing target lemmas, client flags items as used, triggering celebration animations and updating `voiceSessions` persistence.
+### 12.1 Article & Story Reader Architecture
+- **Document & Text Parsing:**
+  - Accepts pasted text or uploaded documents (TXT, PDF) up to 20,000 words.
+  - Backend `ReaderService` parses raw text into structured paragraphs and sentences using natural language sentence boundary tokenization.
+- **In-Reader Tokenization & Contextual Discovery:**
+  - Frontend renders a distraction-free typography reading view with clickable word tokens.
+  - Clicking any word invokes the existing `POST /vocabulary/lookup` flow with its enclosing sentence context.
+  - Automatically identifies useful vocabulary across the text and renders subtle highlight indicators to guide learner focus.
+- **Direct 3-Layer Ingestion:**
+  - 1-click saving commits selected occurrences directly into the 3-layer data model (`VocabularyItem` → `Meaning` → `Occurrence`), preserving the article title and URL as source metadata.
 
-### 12.2 Standardized Academic Rubric Pipeline in `AiModule`
-- **IELTS / CEFR Evaluation Engine:**
-  - `AiModule.evaluateAcademicWriting()` parses essays against IELTS Band Descriptors (Task Achievement, Coherence & Cohesion, Lexical Resource, Grammatical Range & Accuracy).
-  - Explicit rubric scoring rules:
-    - *Lexical Resource (LR):* Calculated by matching text tokens against the user's active vocabulary bank, CEFR Academic Word List (AWL), and collocation naturalness.
-    - *Grammatical Range (GRA):* Identifies complex sentence structures, conditional clauses, passive voice, and error density.
-  - Generates criterion band scores (1.0–9.0, 0.5 increments), overall band, CEFR tier (A1–C2), and concrete band-upgrade recommendations.
-- **Academic Speaking Rubric:**
-  - `AiModule.evaluateAcademicSpeaking()` extends `evaluateSpeech()` with fluency pacing (syllables/minute, pause frequency), lexical variety, and phoneme accuracy mapped to IELTS Speaking Band benchmarks.
+### 12.2 Daily Life Scenario Dialogue Engine in `AiModule`
+- **Scenario Presets:**
+  - Curated daily situations: Ordering at a Cafe, Hotel & Travel Inquiries, Meeting Friends, Everyday Casual Chats.
+  - User can interact via voice (Web Speech API) or text input.
+- **Active Due Vocabulary Injection:**
+  - Injects top 5–10 due vocabulary items from the user's SRS bank into the prompt context.
+  - Directs Gemini to steer the conversation naturally into contexts that encourage the user to use the target words.
+- **Natural Phrasing Feedback (No Exam Scores):**
+  - Generates warm, constructive guidance on natural native expressions and idiomatic phrasing ("A native speaker might say...").
+  - Tracks target vocabulary activation without rigid test band descriptors.
 
-### 12.3 Document Ingestion & CEFR Lexical Profiling Pipeline
-- **Document Ingestion:**
-  - Accepts PDF documents or long raw text up to 20,000 words.
-  - Backend extracts text streams using `pdf-parse`, chunking into coherent paragraphs and tokenizing into sentences.
-- **CEFR Profiling Engine:**
-  - Lemmatizes words and cross-references against authoritative CEFR frequency databases (CEFR English Profile / Oxford 3000/5000).
-  - Filters out A1–B1 common words; filters out words already saved in user's `vocabularyItems`.
-  - Returns prioritized list of candidate B2–C2 lemmas accompanied by exact source context sentences and part-of-speech definitions for 1-click batch insertion into the 3-layer data model (`VocabularyItem` → `Meaning` → `Occurrence`).
-
-### 12.4 PWA & Offline-First SRS Caching Strategy
+### 12.3 PWA & Offline-First SRS Caching Strategy
 - **Client Architecture:** Configured via `vite-plugin-pwa` with custom Service Worker caching.
 - **Local Persistence:** Due review cards (`GET /review/due`) are cached in browser `IndexedDB`.
 - **Review Queue:** Flashcard review submissions during offline periods are saved to an offline mutation queue. When `window.navigator.onLine` fires, background sync replays queued `POST /review/:id/result` calls sequentially to update Mongoose.

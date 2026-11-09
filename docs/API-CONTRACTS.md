@@ -288,34 +288,28 @@ Response: `{ "sessionId": "...", "accuracyScore": 92, "recordedAt": "..." }`
 Request: `{ "targetText": "The startup needs to scale its infrastructure.", "userAudioBase64"?: "...", "userTranscript"?: "The startup need to scale it infrastructure." }`
 Response: `{ "overallScore": 82, "transcribedText": "...", "wordsEvaluation": [{ "word": "The", "status": "correct", "phonemeFeedback": null }, { "word": "needs", "status": "minor_error", "phonemeFeedback": "Missing final /z/ sound" }], "generalTips": "Pay attention to third-person singular 'needs'." }`
 
-## Voice Call & Speaking Sessions (Phase 3)
+## Scenario Conversation & Speaking Sessions (Phase 3)
 
-**`POST /voice/start`** — initiate AI voice phone call session with active vocabulary injection
-Request: `{ "topic"?: "Job Interview / Technology", "targetWordsCount"?: 5 }`
-Response: `{ "sessionId": "...", "topic": "Job Interview", "targetVocabulary": [{ "id": "...", "lemma": "scale", "meaning": "expand in size" }], "initialGreeting": "Hello! Let's talk about scaling tech teams today." }`
+**`POST /voice/start`** — initiate daily conversation session with active vocabulary injection
+Request: `{ "scenarioPreset"?: "coffee_shop" | "hotel_travel" | "casual_chat" | "job_interview", "topic"?: "Ordering at a cafe", "targetWordsCount"?: 5 }`
+Response: `{ "sessionId": "...", "scenario": "Coffee Shop", "targetVocabulary": [{ "id": "...", "lemma": "scale", "meaning": "expand in size" }], "initialGreeting": "Hi there! Welcome to the cafe. What can I get started for you today?" }`
 
-**`POST /voice/turn`** — process speech turn and retrieve AI spoken response
-Request: `{ "sessionId": "...", "userTranscript": "We need to scale our backend service.", "userAudioBase64"?: "..." }`
-Response: `{ "assistantText": "That's a great approach. What bottlenecks do you foresee?", "detectedTargetWords": ["scale"], "grammarFeedback": null, "targetWordsRemaining": [] }`
+**`POST /voice/turn`** — process speech/text turn and retrieve AI conversational response
+Request: `{ "sessionId": "...", "userTranscript": "I'd like an iced latte, and can you scale up the cup size?", "userAudioBase64"?: "..." }`
+Response: `{ "assistantText": "Sure thing! A large iced latte coming right up. Anything else for you?", "detectedTargetWords": ["scale"], "phrasingFeedback": null, "targetWordsRemaining": [] }`
 
-**`POST /voice/end`** — finalize voice call and return fluency report
+**`POST /voice/end`** — finalize conversation session and return fluency summary
 Request: `{ "sessionId": "..." }`
-Response: `{ "sessionId": "...", "durationSeconds": 185, "spokenMetrics": { "totalWordsSpoken": 140, "speakingPaceWpm": 115, "fillerWordsCount": 3, "retentionRate": 100, "overallIeltsFluencyBand": 7.0 }, "dialogueSummary": "...", "vocabularyMastered": ["scale"] }`
+Response: `{ "sessionId": "...", "durationSeconds": 185, "spokenMetrics": { "totalWordsSpoken": 140, "speakingPaceWpm": 115, "fillerWordsCount": 3, "activationRate": 100, "conversationFluencyScore": 85 }, "dialogueSummary": "Great casual interaction at the coffee shop.", "naturalPhrasingTips": ["Instead of 'scale up the cup size', you can naturally say 'make it a large'."], "vocabularyMastered": ["scale"] }`
 
-## Academic Evaluation (Phase 3)
+## Article & Story Reader (Phase 3)
 
-**`POST /writing/evaluate-academic`** — evaluate essay against standardized IELTS Task 1/2 rubrics
-Request: `{ "essayText": "...", "prompt": "...", "taskType": "task_2" }`
-Response: `{ "ieltsBand": 7.0, "cefrLevel": "C1", "criteria": { "taskAchievement": { "band": 7.0, "feedback": "..." }, "coherenceCohesion": { "band": 7.0, "feedback": "..." }, "lexicalResource": { "band": 7.5, "feedback": "...", "targetWordsUsed": ["infrastructure", "scale"] }, "grammaticalRange": { "band": 6.5, "feedback": "..." } }, "sentenceUpgrades": [{ "original": "...", "improved": "...", "explanation": "..." }] }`
+**`POST /reader/parse`** — parse raw text, article, or document into structured reader view
+Request: `{ "title"?: "The Future of Remote Work", "text": "...", "sourceUrl"?: "https://medium.com/..." }`
+Response: `{ "articleId": "...", "title": "The Future of Remote Work", "totalWordCount": 850, "paragraphs": [{ "sentences": [{ "text": "...", "tokens": ["..."] }] }], "discoveredVocabulary": [{ "lemma": "ubiquitous", "contextSentence": "Remote collaboration tools have become ubiquitous in modern workflows.", "suggestedMeaning": "present or found everywhere" }] }`
 
-## Document Ingestion & Profiling (Phase 3)
-
-**`POST /documents/extract`** — analyze PDF or long text against CEFR lexicon
-Request: `{ "title": "AI in Healthcare.pdf", "text": "...", "targetCefrLevels"?: ["B2", "C1", "C2"] }`
-Response: `{ "documentId": "...", "title": "AI in Healthcare.pdf", "totalWordCount": 3400, "candidateLemmas": [{ "lemma": "ubiquitous", "cefrLevel": "C1", "partOfSpeech": "adjective", "contextSentence": "Smart devices have become ubiquitous in clinical practice.", "definition": "present, appearing, or found everywhere" }] }`
-
-**`POST /documents/batch-save`** — commit selected candidates to 3-layer vocabulary bank
-Request: `{ "documentId": "...", "selectedLemmas": ["ubiquitous"] }`
+**`POST /reader/batch-save`** — commit selected words from reader into 3-layer vocabulary bank
+Request: `{ "articleId": "...", "items": [{ "lemma": "ubiquitous", "meaning": "present or found everywhere", "contextSentence": "Remote collaboration tools have become ubiquitous..." }] }`
 Response: `{ "savedCount": 1, "occurrences": [{ "id": "...", "lemma": "ubiquitous" }] }`
 
 ## Error Codes (non-exhaustive, extend as needed)

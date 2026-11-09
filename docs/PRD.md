@@ -16,24 +16,25 @@
 - **G3 (Loop Closure):** Transform passive lookups into active, scheduled spaced reviews and AI quizzes.
 - **G4 (Active Application):** Provide AI chat and writing review tools to practice using saved vocabulary.
 - **G5 (Multimodal Listening & Speaking — P2):** Turn authentic streaming media (YouTube/Netflix) into active dictation and speech shadowing environments. (Completed)
-- **G6 (Academic Standard & Voice Immersion — P3):** Transform passive vocabulary into fluent spoken output through real-time AI voice conversations, standardized IELTS/CEFR academic rubrics, and automated document ingestion.
+- **G6 (Authentic Reading & Practical Immersion — P3):** Enable seamless reading of real-world articles, stories, and documents with instant in-context word capture, daily life scenario conversation practice, and mobile PWA access.
 
 ### Non-Goals (Out of Scope)
 - Full-page DOM scanning or passive page telemetry (violates privacy boundary).
 - Full AI tutoring with syllabus management or adaptive grade-level curriculum.
+- Academic exam preparation drills (IELTS/TOEIC band scoring, test rubrics, exam task simulators) — LinguaFlow is dedicated to practical, natural everyday English acquisition, not test cramming.
 - Export to CSV/Anki or team/classroom sharing.
 - Social features (leaderboards, friends, shared decks).
 - Standalone native mobile apps (PWA provides mobile web installability).
 
 ## 3. Target User & JTBD
 
-- **Primary User:** University students & young adults (B1–B2 level) reading English content, preparing for academic exams (IELTS/TOEIC), and watching English video online.
+- **Primary User:** University students, professionals, and English learners (B1–B2 level) reading authentic English content (articles, blogs, news, stories), watching English video online, and building natural communicative confidence.
 - **JTBD-1 (In-Context Lookup):** Understand words in their exact current sentence without losing reading momentum.
 - **JTBD-2 (Contextual Saving):** Preserve words along with original sentences and video timestamps to remember usage.
 - **JTBD-3 (Spaced Recall):** Receive automated review prompts based on memory decay with audio/video context.
 - **JTBD-4 (Self-Testing):** Validate retention through AI-generated quizzes and listening dictation.
 - **JTBD-5 (Active Application):** Practice using saved words in AI chat conversations, writing essays, and line-by-line speech shadowing.
-- **JTBD-6 (Conversational & Academic Mastery):** Practice active spoken communication with AI voice calls and receive standardized IELTS/CEFR band scoring for academic and professional readiness.
+- **JTBD-6 (Authentic Reading & Everyday Conversation):** Read real-world articles, stories, and documents with effortless in-context word harvesting, and practice natural communication in realistic daily life scenarios.
 
 ## 4. Priority Tiers
 
@@ -44,7 +45,7 @@ All functional requirements are classified into four priority tiers:
 | **P0 — Launch Blocker** | Must be fully functional before first release. Without these, the core learning loop is broken. (Completed) | Auth, Extension Capture, Vocabulary Management, Flashcard Review |
 | **P1 — MVP Enrichment** | Enriches textual learning loop and retention tracking. (Completed) | Quiz, AI Chat, Writing Review, Dashboard & Settings |
 | **P2 — Media & Multimodal** | Transforms video consumption into active listening and speaking practice. (Completed) | Video Dual Subtitles & Overlay, Dictation Practice, Shadowing & AI Voice Assessment, Web Video Study Room, Multi-modal Flashcards |
-| **P3 — Academic Mastery & Voice Immersion (Advanced Roadmap)** | Bridges the competitive gap with market leaders (OpenQuiz) by enabling real-time voice conversations, IELTS/CEFR academic rubrics, document/PDF vocabulary ingestion, and PWA mobile access. | Real-Time AI Voice Call, Standardized IELTS/CEFR Rubrics (Writing & Speaking), Document/PDF Ingestion & CEFR Profiling, Progressive Web App (PWA) |
+| **P3 — Authentic Reading & Practical Immersion (Advanced Roadmap)** | Bridges the gap to authentic fluency through an interactive article reader, daily life scenario conversations, and mobile PWA access. | Article & Story Reader (In-Context Lookup & Highlight), Daily Scenario Conversations, Progressive Web App (PWA) with Offline Flashcard Review |
 | **P3+ / Experimental — Spatial Cognition & 3D Interactive Lab (Future Backlog)** | Solves conceptual confusion around directional verbs and movement prepositions through interactive 3D spatial simulations. | 3D Spatial Preposition & Action Sandbox, 3D Directional Motion Quizzes |
 
 > **Rule:** All P0, P1, and P2 features must remain green across all test suites as P3 development proceeds.
@@ -390,56 +391,43 @@ flowchart TD
 - _AC-1:_ If occurrence has `mediaMetadata`, card back displays "Play Context Clip" button.
 - _AC-2:_ Clicking button loads embedded player pre-rolled 2 seconds before timestamp and stops 3 seconds after.
 
-### 6.14 Real-Time AI Voice Call / Speaking Tutor — P3
+### 6.14 Daily Life Scenario Conversation & Speaking Practice — P3
 
-**FR-VOICE-001: Bi-Directional Conversational Voice Call**
-- Real-time spoken dialogue simulating a voice phone call with an AI native speaker tutor.
-- _AC-1:_ Web client provides one-click "Start AI Voice Call" with visual audio waveform and call duration timer.
-- _AC-2:_ Continuous duplex voice interaction: user speaks into microphone → client captures audio → AI responds with low-latency spoken voice synthesis.
+**FR-CONV-001: Practical Scenario-Based Conversational Dialogue**
+- Real-time spoken or text dialogue simulating natural everyday English conversations (ordering coffee, asking for directions, hotel check-in, casual chats, travel).
+- _AC-1:_ User selects from curated daily scenario presets (e.g. "Coffee Shop", "Airport & Travel", "Meeting a Friend", "Casual Job Interview") or enters a custom topic.
+- _AC-2:_ Continuous conversational interaction: user speaks or types → AI responds with natural, conversational spoken voice synthesis.
 - _AC-3:_ Push-to-talk and Voice Activity Detection (VAD) toggle modes available.
 
-**FR-VOICE-002: Active Due Vocabulary Injection**
-- AI tutor actively drives conversation topics to prompt the user to use due review vocabulary items.
+**FR-CONV-002: Active Due Vocabulary Injection**
+- AI tutor actively steers conversation topics to encourage the user to naturally recall and use due review vocabulary items.
 - _AC-1:_ Session pre-loads top 5–10 due vocabulary items from the user's SRS bank.
-- _AC-2:_ AI tutor models target words naturally in dialogue turns and asks targeted questions prompting the user to recall and speak them.
-- _AC-3:_ Real-time visual checklist tracks target words: greyed out → illuminated green upon successful spoken usage by the student.
+- _AC-2:_ AI tutor models target words naturally in dialogue turns and asks open-ended questions prompting the user to use them.
+- _AC-3:_ Real-time visual checklist tracks target words: greyed out → illuminated green upon successful spoken/written usage.
 
-**FR-VOICE-003: Post-Call Spoken Fluency Report**
-- Comprehensive speaking performance summary delivered upon ending call.
-- _AC-1:_ Reports: Total Speaking Time, Words Spoken, Active Target Vocabulary Retention Rate (%).
-- _AC-2:_ Transcribes dialogue with inline highlighted grammar slips, filler word detection ("um", "uh"), and suggested natural phrasing alternatives.
+**FR-CONV-003: Post-Conversation Natural Phrasing Feedback**
+- Constructive, gentle speaking/dialogue performance summary delivered upon ending session (no exam band scoring).
+- _AC-1:_ Reports: Total Speaking/Dialogue Time, Words Spoken, Target Vocabulary Activation Rate (%).
+- _AC-2:_ Transcribes dialogue with friendly recommendations on how a native speaker would phrase sentences more naturally ("A native speaker might say...").
 
-### 6.15 Standardized Academic Assessment (IELTS & CEFR) — P3
+### 6.15 Article & Story Reader (Authentic Reading & Vocab Harvesting) — P3
 
-**FR-ACAD-001: IELTS Writing Rubric Evaluation**
-- Writing evaluations grade essays according to official IELTS 4-criterion band descriptors (Band 1.0–9.0).
-- _AC-1:_ Evaluates user submissions across four standard dimensions:
-  1. *Task Achievement / Task Response (TR)*
-  2. *Coherence & Cohesion (CC)*
-  3. *Lexical Resource (LR)* — specifically measures proportion and sophistication of user's saved bank vocabulary utilized.
-  4. *Grammatical Range & Accuracy (GRA)*
-- _AC-2:_ Produces criterion-level sub-scores, overall IELTS band estimate (e.g. 6.5, 7.0), and CEFR proficiency equivalent (B2, C1).
-- _AC-3:_ Provides sentence-by-sentence upgrade recommendations matching Band 8+ academic writing conventions.
+**FR-READER-001: Paste or Import Reading Materials**
+- Learners can import authentic English articles, news, blog posts, stories, or PDF text to read in a distraction-free reader interface.
+- _AC-1:_ Accepts pasted text or uploaded document (PDF/TXT) up to 20,000 words.
+- _AC-2:_ Renders clean reader view with customizable typography, dark/light theme, and clear paragraph formatting.
 
-**FR-ACAD-002: IELTS Speaking & Fluency Rubric in Shadowing/Voice**
-- Standardized speaking scoring for Shadowing attempts and Voice Calls.
-- _AC-1:_ Scores Fluency & Coherence, Lexical Resource, Grammatical Range, and Pronunciation (phonemic accuracy, word stress, intonation contours).
-- _AC-2:_ Maps pronunciation scores to IELTS speaking band equivalents.
+**FR-READER-002: Interactive In-Reader Click-to-Lookup & Vocabulary Discovery**
+- Every word in the reading material is interactively clickable for instant comprehension.
+- _AC-1:_ Clicking any word in the reader opens LinguaFlow's in-context explanation popup without leaving the reading flow.
+- _AC-2:_ Automatically highlights useful vocabulary and common collocations across the article to guide reading focus.
 
-### 6.16 Document & Reading Material Ingestion (OCR / PDF) — P3
+**FR-READER-003: 1-Click Contextual Save to Vocabulary Bank**
+- Seamlessly save unknown words along with the exact sentence from the article.
+- _AC-1:_ 1-click save captures: `lemma`, in-context `meaning`, and the exact parent sentence from the article as an `occurrence`.
+- _AC-2:_ Saves reading source metadata `{ sourceTitle, sourceUrl }` into the occurrence document.
 
-**FR-DOC-001: PDF & Long Text Document Ingestion**
-- Users can import reading materials directly into LinguaFlow to harvest vocabulary.
-- _AC-1:_ Accepts PDF upload or long text paste (up to 20,000 words).
-- _AC-2:_ Parses text while preserving document paragraphs and sentence structure boundaries.
-
-**FR-DOC-002: Automated CEFR Vocabulary Profiling & Batch Save**
-- Automatic identification of advanced/academic vocabulary with context sentences.
-- _AC-1:_ Analyzes document against CEFR vocabulary frequency lists (A1–C2).
-- _AC-2:_ Surfaces B2, C1, C2 target lemmas that do not yet exist in the user's vocabulary bank.
-- _AC-3:_ Displays 1-click batch save modal with extracted context sentences, lemma definitions, and CEFR level tags, populating the 3-layer data model (`VocabularyItem` → `Meaning` → `Occurrence`).
-
-### 6.17 Progressive Web App (PWA) & Mobile Installability — P3
+### 6.16 Progressive Web App (PWA) & Mobile Installability — P3
 
 **FR-PWA-001: Mobile Home Screen Install & Offline-First Review**
 - Installable web app providing mobile-native study convenience.
@@ -447,7 +435,7 @@ flowchart TD
 - _AC-2:_ Local caching of due review flashcards allowing uninterrupted SRS review during intermittent connectivity.
 - _AC-3:_ Background sync queues SM-2 review results and synchronizes to MongoDB when connection restores.
 
-### 6.18 3D Spatial Preposition & Action Sandbox (Visual Cognition) — P3+ / Future Backlog
+### 6.17 3D Spatial Preposition & Action Sandbox (Visual Cognition) — P3+ / Future Backlog
 
 **FR-3D-001: 3D Spatial Preposition & Motion Visualization**
 - Interactive 3D physical sandbox demonstrating vector trajectories and physical relationships for prepositions of movement and directional phrasal verbs (*walk along, walk across, walk into, walk through, walk past, jump over, crawl under*).

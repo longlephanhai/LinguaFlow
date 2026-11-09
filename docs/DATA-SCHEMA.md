@@ -338,24 +338,6 @@ One document per writing submission. Feedback is an AI snapshot (immutable after
   suggestions: [string],  // list of specific improvement points
   aiModel: string,        // model version used — auditability
 
-  // --- Academic Evaluation (Phase 3) ---
-  academicRubric: {
-    ieltsBand: number,            // 1.0 .. 9.0 (0.5 step)
-    cefrLevel: string,           // "A1" | "A2" | "B1" | "B2" | "C1" | "C2"
-    taskAchievement: number,     // 1.0 .. 9.0
-    coherenceCohesion: number,   // 1.0 .. 9.0
-    lexicalResource: number,     // 1.0 .. 9.0
-    grammaticalRange: number,    // 1.0 .. 9.0
-    targetWordsUsedCount: number, // count of user's bank vocabulary accurately used
-    upgrades: [
-      {
-        originalSentence: string,
-        improvedSentence: string,
-        explanation: string,
-      }
-    ],
-  } | null,
-
   // --- Soft Delete ---
   isDeleted: boolean,    // default false
   deletedAt: Date | null,
@@ -559,9 +541,6 @@ Records audio submissions, phoneme breakdown, and AI fluency scores.
   ],
   audioUrl: string | null,  // stored audio recording URL (optional)
 
-  // --- Academic Evaluation (Phase 3) ---
-  ieltsSpeakingBand: number | null, // 1.0 .. 9.0
-
   // --- Timestamps ---
   createdAt: Date,
 }
@@ -569,9 +548,9 @@ Records audio submissions, phoneme breakdown, and AI fluency scores.
 
 ---
 
-## `voiceSessions` (Phase 3) — real-time conversational AI speaking calls
+## `voiceSessions` (Phase 3) — daily life scenario conversation sessions
 
-Records voice dialogue sessions with the AI tutor, target vocabulary recall, and fluency metrics.
+Records dialogue sessions with the AI tutor, target vocabulary recall, and conversational metrics.
 
 ```ts
 {
@@ -581,10 +560,11 @@ Records voice dialogue sessions with the AI tutor, target vocabulary recall, and
   userId: ObjectId,         // ref: users, indexed
 
   // --- Session Attributes ---
+  scenarioPreset: string,   // e.g. "coffee_shop", "hotel_travel", "casual_chat"
   topic: string,            // conversation theme or scenario prompt
-  durationSeconds: number,  // total call duration
+  durationSeconds: number,  // total session duration
   targetVocabularyItemIds: [ObjectId], // ref: vocabularyItems (words scheduled for reinforcement)
-  usedVocabularyItemIds: [ObjectId],   // ref: vocabularyItems (words successfully spoken)
+  usedVocabularyItemIds: [ObjectId],   // ref: vocabularyItems (words successfully spoken/written)
 
   // --- Dialogue History ---
   dialogueHistory: [
@@ -593,7 +573,7 @@ Records voice dialogue sessions with the AI tutor, target vocabulary recall, and
       text: string,
       timestamp: Date,
       detectedTargetWords: [string],
-      grammarFeedback: string | null,
+      phrasingFeedback: string | null,
     }
   ],
 
@@ -602,8 +582,8 @@ Records voice dialogue sessions with the AI tutor, target vocabulary recall, and
     totalWordsSpoken: number,
     speakingPaceWpm: number,        // words per minute
     fillerWordsCount: number,       // "um", "uh", "like" count
-    retentionRate: number,          // (used / target) * 100
-    overallIeltsFluencyBand: number, // 1.0 .. 9.0
+    activationRate: number,         // (used / target) * 100
+    conversationFluencyScore: number, // 0 .. 100
   },
 
   // --- Soft Delete ---
@@ -623,9 +603,9 @@ Records voice dialogue sessions with the AI tutor, target vocabulary recall, and
 
 ---
 
-## `documents` (Phase 3) — ingested reading materials & PDF uploads
+## `documents` (Phase 3) — imported reading articles & stories
 
-Stores imported reading texts and parsed CEFR lexical profile candidate lemmas.
+Stores imported reading texts, articles, and discovered in-context vocabulary.
 
 ```ts
 {
@@ -635,16 +615,15 @@ Stores imported reading texts and parsed CEFR lexical profile candidate lemmas.
   userId: ObjectId,         // ref: users, indexed
 
   // --- Document Metadata ---
-  title: string,            // filename or user title
-  fileType: "pdf" | "text",
+  title: string,            // filename, article headline, or user title
+  sourceUrl: string | null, // optional source article link
   totalWordCount: number,
   extractedLemmasCount: number,
 
-  // --- Candidate Lexical Profile ---
-  candidateLemmas: [
+  // --- Discovered Lexical Profile ---
+  discoveredVocabulary: [
     {
       lemma: string,
-      cefrLevel: "B2" | "C1" | "C2",
       partOfSpeech: string,
       contextSentence: string,
       definition: string,
@@ -703,5 +682,5 @@ This 3-layer constraint is a **fixed invariant** from `PRD.md §FR-VOCAB-002` an
 |---|---|---|
 | v1 | 2026-09-27 | Initial schema — full timestamps, soft-delete (`isDeleted` / `deletedAt`), enriched fields: `partOfSpeech`, `sourceTitle`, `capturedAt`, `selectedText`, `review.suspended`, `aiModel`, `quiz.status`, `quizResult.totalQuestions/timeSpentMs`, `chatSession.title`, `writingReview.wordCount`, `users.timezone/displayName/refreshTokenHash` |
 | v2 | 2026-10-18 | RBAC Authorization — added `roles` and `permissions` collections, added `roleId` reference to `users` |
-| v3 | 2026-11-08 | Phase 3 Expansion — added `academicRubric` to `writingReviews`, added `voiceSessions` collection for AI phone calls, added `documents` collection for PDF/CEFR vocabulary ingestion |
+| v3 | 2026-11-10 | Phase 3 Expansion — added `voiceSessions` collection for everyday scenario conversation, added `documents` collection for authentic article/story reading and vocabulary discovery |
 
