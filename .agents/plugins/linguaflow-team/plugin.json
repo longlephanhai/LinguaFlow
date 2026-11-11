@@ -1,0 +1,12 @@
+{
+  "name": "linguaflow-team",
+  "displayName": "LinguaFlow Engineering Team",
+  "description": "Multi-agent and sub-agent team tailored for LinguaFlow (Architect, Backend, Frontend/Extension, QA Tester, and Security/Code Auditor).",
+  "version": "1.0.0",
+  "suggestedPrompts": [
+    "Use the LinguaFlow team to design and implement a new feature across backend and frontend",
+    "Run the QA tester and code auditor sub-agents to verify pending changes before commit",
+    "Analyze an upcoming feature from docs/PRD.md using the architect sub-agent"
+  ]
+}
+
