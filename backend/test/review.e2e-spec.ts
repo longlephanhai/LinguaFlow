@@ -18,6 +18,7 @@ describe('ReviewController (e2e)', () => {
       getDueOccurrences: vi.fn(),
       recordReviewResult: vi.fn(),
       suspendCard: vi.fn(),
+      syncBatchReviews: vi.fn(),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -152,6 +153,130 @@ describe('ReviewController (e2e)', () => {
         'occ-123',
         { suspended: true },
       );
+    });
+  });
+
+  describe('POST /review/sync', () => {
+    it('should sync batch reviews and return results in response envelope', async () => {
+      mockReviewService.syncBatchReviews.mockResolvedValue({
+        syncedCount: 2,
+        results: [
+          {
+            occurrenceId: '507f1f77bcf86cd799439011',
+            nextDueDate: '2026-11-12T10:00:00.000Z',
+            intervalDays: 1,
+            easeFactor: 2.6,
+            repetition: 1,
+            repetitions: 1,
+          },
+          {
+            occurrenceId: '507f1f77bcf86cd799439022',
+            nextDueDate: '2026-11-12T12:00:00.000Z',
+            intervalDays: 1,
+            easeFactor: 2.3,
+            repetition: 0,
+            repetitions: 0,
+          },
+        ],
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/review/sync')
+        .send({
+          items: [
+            {
+              occurrenceId: '507f1f77bcf86cd799439011',
+              remembered: true,
+              reviewedAt: '2026-11-11T10:00:00.000Z',
+            },
+            {
+              occurrenceId: '507f1f77bcf86cd799439022',
+              remembered: false,
+              reviewedAt: '2026-11-11T12:00:00.000Z',
+            },
+          ],
+        })
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual({
+        syncedCount: 2,
+        results: [
+          {
+            occurrenceId: '507f1f77bcf86cd799439011',
+            nextDueDate: '2026-11-12T10:00:00.000Z',
+            intervalDays: 1,
+            easeFactor: 2.6,
+            repetition: 1,
+            repetitions: 1,
+          },
+          {
+            occurrenceId: '507f1f77bcf86cd799439022',
+            nextDueDate: '2026-11-12T12:00:00.000Z',
+            intervalDays: 1,
+            easeFactor: 2.3,
+            repetition: 0,
+            repetitions: 0,
+          },
+        ],
+      });
+      expect(mockReviewService.syncBatchReviews).toHaveBeenCalledWith(
+        'user-review-e2e',
+        expect.objectContaining({
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              occurrenceId: '507f1f77bcf86cd799439011',
+              remembered: true,
+            }),
+          ]),
+        }),
+      );
+    });
+
+    it('should fail validation when occurrenceId is not a valid MongoId', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/review/sync')
+        .send({
+          items: [
+            {
+              occurrenceId: 'not-a-mongo-id',
+              remembered: true,
+            },
+          ],
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should fail validation when remembered is missing or non-boolean', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/review/sync')
+        .send({
+          items: [
+            {
+              occurrenceId: '507f1f77bcf86cd799439011',
+              remembered: 'yes',
+            },
+          ],
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should fail validation when items is not an array', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/review/sync')
+        .send({
+          items: 'invalid',
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 });

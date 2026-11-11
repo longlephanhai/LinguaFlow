@@ -79,6 +79,38 @@ Response: `{ "nextDueDate": "2026-09-27T00:00:00Z", "intervalDays": 6 }`
 Request: `{ "suspended": true }`
 Response: `{ "success": true, "suspended": true }`
 
+**`POST /review/sync`**
+Synchronise queued offline review results in batch.
+
+Request:
+```json
+{
+  "items": [
+    {
+      "occurrenceId": "651a...",
+      "remembered": true,
+      "reviewedAt": "2026-11-11T14:00:00.000Z"
+    }
+  ]
+}
+```
+
+Response:
+```json
+{
+  "syncedCount": 1,
+  "results": [
+    {
+      "occurrenceId": "651a...",
+      "nextDueDate": "2026-11-17T14:00:00.000Z",
+      "intervalDays": 6,
+      "easeFactor": 2.5,
+      "repetition": 1
+    }
+  ]
+}
+```
+
 ## Quiz
 
 **`POST /quiz/generate`**

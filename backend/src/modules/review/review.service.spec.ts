@@ -213,4 +213,97 @@ describe('ReviewService', () => {
       expect(result.suspended).toBe(true);
     });
   });
+
+  describe('syncBatchReviews', () => {
+    it('should return empty result if dto has empty items', async () => {
+      const result = await service.syncBatchReviews(userId, { items: [] });
+      expect(result).toEqual({ syncedCount: 0, results: [] });
+    });
+
+    it('should return empty result if userId is invalid', async () => {
+      const result = await service.syncBatchReviews('invalid-id', {
+        items: [{ occurrenceId, remembered: true }],
+      });
+      expect(result).toEqual({ syncedCount: 0, results: [] });
+    });
+
+    it('should skip occurrences that are invalid or not found', async () => {
+      mockOccurrenceModel.findOne.mockResolvedValue(null);
+
+      const result = await service.syncBatchReviews(userId, {
+        items: [
+          { occurrenceId: 'invalid-occ-id', remembered: true },
+          { occurrenceId, remembered: true },
+        ],
+      });
+
+      expect(result).toEqual({ syncedCount: 0, results: [] });
+    });
+
+    it('should sync valid occurrences with correct SM-2 calculations and custom reviewedAt', async () => {
+      const occId1 = new Types.ObjectId().toString();
+      const occId2 = new Types.ObjectId().toString();
+
+      const mockOcc1 = {
+        _id: new Types.ObjectId(occId1),
+        userId: new Types.ObjectId(userId),
+        review: {
+          easeFactor: 2.5,
+          repetitions: 0,
+          intervalDays: 1,
+          dueDate: new Date(),
+          suspended: false,
+        },
+        save: vi.fn().mockResolvedValue(true),
+      };
+
+      const mockOcc2 = {
+        _id: new Types.ObjectId(occId2),
+        userId: new Types.ObjectId(userId),
+        review: {
+          easeFactor: 2.5,
+          repetitions: 1,
+          intervalDays: 1,
+          dueDate: new Date(),
+          suspended: false,
+        },
+        save: vi.fn().mockResolvedValue(true),
+      };
+
+      mockOccurrenceModel.findOne
+        .mockResolvedValueOnce(mockOcc1)
+        .mockResolvedValueOnce(mockOcc2);
+
+      const reviewDate1 = '2026-11-10T10:00:00.000Z';
+      const reviewDate2 = '2026-11-10T12:00:00.000Z';
+
+      const result = await service.syncBatchReviews(userId, {
+        items: [
+          { occurrenceId: occId1, remembered: true, reviewedAt: reviewDate1 },
+          { occurrenceId: occId2, remembered: false, reviewedAt: reviewDate2 },
+        ],
+      });
+
+      expect(result.syncedCount).toBe(2);
+      expect(result.results).toHaveLength(2);
+
+      // occ1: first successful review -> rep=1, interval=1, easeFactor=2.6
+      expect(mockOcc1.save).toHaveBeenCalled();
+      expect(result.results[0]).toMatchObject({
+        occurrenceId: occId1,
+        intervalDays: 1,
+        easeFactor: 2.6,
+        repetition: 1,
+      });
+
+      // occ2: failed recall -> rep=0, interval=1, easeFactor=2.3
+      expect(mockOcc2.save).toHaveBeenCalled();
+      expect(result.results[1]).toMatchObject({
+        occurrenceId: occId2,
+        intervalDays: 1,
+        easeFactor: 2.3,
+        repetition: 0,
+      });
+    });
+  });
 });

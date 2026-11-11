@@ -38,6 +38,25 @@ export interface ReviewResultResponse {
   intervalDays: number;
 }
 
+export interface BatchReviewSyncItem {
+  occurrenceId: string;
+  remembered: boolean;
+  reviewedAt?: string;
+}
+
+export interface BatchReviewSyncResultItem {
+  occurrenceId: string;
+  nextDueDate: string;
+  intervalDays: number;
+  easeFactor: number;
+  repetition: number;
+}
+
+export interface BatchReviewSyncResponse {
+  syncedCount: number;
+  results: BatchReviewSyncResultItem[];
+}
+
 export const reviewApi = {
   getDueOccurrences: async (): Promise<ReviewDueResponse> => {
     return api.get('/review/due') as unknown as Promise<ReviewDueResponse>;
@@ -45,6 +64,10 @@ export const reviewApi = {
 
   recordResult: async (occurrenceId: string, remembered: boolean): Promise<ReviewResultResponse> => {
     return api.post(`/review/${occurrenceId}/result`, { remembered }) as unknown as Promise<ReviewResultResponse>;
+  },
+
+  syncBatchReviews: async (items: BatchReviewSyncItem[]): Promise<BatchReviewSyncResponse> => {
+    return api.post('/review/sync', { items }) as unknown as Promise<BatchReviewSyncResponse>;
   },
 
   suspendCard: async (occurrenceId: string, suspended: boolean): Promise<{ success: boolean; suspended: boolean }> => {

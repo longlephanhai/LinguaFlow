@@ -12,6 +12,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { ReviewService } from './review.service.js';
 import { ReviewResultDto } from './dto/review-result.dto.js';
 import { SuspendCardDto } from './dto/suspend-card.dto.js';
+import { BatchReviewSyncDto } from './dto/batch-review-sync.dto.js';
 
 @Controller('review')
 @UseGuards(JwtAuthGuard)
@@ -22,6 +23,15 @@ export class ReviewController {
   async getDueOccurrences(@CurrentUser() user: any) {
     const userId = user.userId || user.id;
     return this.reviewService.getDueOccurrences(userId);
+  }
+
+  @Post('sync')
+  async syncBatchReviews(
+    @Body() dto: BatchReviewSyncDto,
+    @CurrentUser() user: any,
+  ) {
+    const userId = user.userId || user.id;
+    return this.reviewService.syncBatchReviews(userId, dto);
   }
 
   @Post(':occurrenceId/result')

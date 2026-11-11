@@ -7,6 +7,7 @@ import { Meaning } from '../vocabulary/schemas/meaning.schema.js';
 import { User } from '../users/schemas/user.schema.js';
 import { ReviewResultDto } from './dto/review-result.dto.js';
 import { SuspendCardDto } from './dto/suspend-card.dto.js';
+import { BatchReviewSyncDto } from './dto/batch-review-sync.dto.js';
 import { scheduleNext } from './srs.scheduler.js';
 
 @Injectable()
@@ -169,6 +170,81 @@ export class ReviewService {
     return {
       success: true,
       suspended: dto.suspended,
+    };
+  }
+
+  async syncBatchReviews(userId: string, dto: BatchReviewSyncDto) {
+    if (!Types.ObjectId.isValid(userId)) {
+      return { syncedCount: 0, results: [] };
+    }
+
+    const userObjId = new Types.ObjectId(userId);
+    const results: Array<{
+      occurrenceId: string;
+      nextDueDate: string;
+      intervalDays: number;
+      easeFactor: number;
+      repetition: number;
+      repetitions: number;
+    }> = [];
+
+    for (const item of dto.items ?? []) {
+      if (!item?.occurrenceId || !Types.ObjectId.isValid(item.occurrenceId)) {
+        continue;
+      }
+
+      const occ = await this.occurrenceModel.findOne({
+        _id: new Types.ObjectId(item.occurrenceId),
+        userId: userObjId,
+        isDeleted: false,
+      });
+
+      if (!occ) {
+        continue;
+      }
+
+      const currentReview = occ.review ?? {
+        easeFactor: 2.5,
+        intervalDays: 1,
+        repetitions: 0,
+        suspended: false,
+      };
+
+      const reviewDate = item.reviewedAt ? new Date(item.reviewedAt) : new Date();
+      const validReviewDate = isNaN(reviewDate.getTime()) ? new Date() : reviewDate;
+
+      const next = scheduleNext({
+        remembered: item.remembered,
+        easeFactor: currentReview.easeFactor ?? 2.5,
+        repetitions: currentReview.repetitions ?? 0,
+        intervalDays: currentReview.intervalDays ?? 1,
+        today: validReviewDate,
+      });
+
+      occ.review = {
+        easeFactor: next.easeFactor,
+        repetitions: next.repetitions,
+        intervalDays: next.intervalDays,
+        dueDate: next.dueDate,
+        lastReviewedAt: validReviewDate,
+        suspended: occ.review?.suspended ?? false,
+      };
+
+      await occ.save();
+
+      results.push({
+        occurrenceId: occ._id.toString(),
+        nextDueDate: next.dueDate.toISOString(),
+        intervalDays: next.intervalDays,
+        easeFactor: next.easeFactor,
+        repetition: next.repetitions,
+        repetitions: next.repetitions,
+      });
+    }
+
+    return {
+      syncedCount: results.length,
+      results,
     };
   }
 }

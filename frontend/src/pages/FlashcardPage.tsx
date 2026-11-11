@@ -27,8 +27,18 @@ import {
   IconPlayerPause,
   IconPlayerPlay,
   IconVideo,
+  IconWifiOff,
+  IconCloudUpload,
+  IconDownload,
 } from '@tabler/icons-react';
 import { reviewApi, type DueOccurrence } from '../lib/review.api';
+import {
+  cacheDueCards,
+  getCachedDueCards,
+  queueOfflineReview,
+  getQueuedReviewsCount,
+} from '../lib/offline-storage';
+import { syncOfflineReviews } from '../lib/offline-sync';
 
 function formatClipTime(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return '0:00';
@@ -52,18 +62,63 @@ export function FlashcardPage() {
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [lastReviewFeedback, setLastReviewFeedback] = useState<string | null>(null);
 
+  // Offline-first and PWA state
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [pendingQueueCount, setPendingQueueCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   const fetchDueCards = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    setIsOnline(online);
+
+    if (!online) {
+      // Offline mode: load from cached cards
+      const cached = await getCachedDueCards();
+      if (cached && cached.length > 0) {
+        setCards(cached);
+        setIsOfflineMode(true);
+        setCurrentIndex(0);
+        setIsFlipped(false);
+        setShowClip(false);
+        setSessionCompleted(false);
+      } else {
+        setError('You are offline and no flashcards are cached. Connect to the internet to load cards.');
+      }
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await reviewApi.getDueOccurrences();
-      setCards(response.occurrences || []);
+      const occurrences = response.occurrences || [];
+      setCards(occurrences);
+      setIsOfflineMode(false);
       setCurrentIndex(0);
       setIsFlipped(false);
       setShowClip(false);
       setSessionCompleted(false);
+      // Persist in local offline cache
+      await cacheDueCards(occurrences);
     } catch (err: any) {
-      setError(err?.response?.data?.error?.message || err?.message || 'Failed to load due cards');
+      // If network fails, attempt fallback to cached cards
+      const cached = await getCachedDueCards();
+      if (cached && cached.length > 0) {
+        setCards(cached);
+        setIsOfflineMode(true);
+        setCurrentIndex(0);
+        setIsFlipped(false);
+        setShowClip(false);
+        setSessionCompleted(false);
+      } else {
+        setError(err?.response?.data?.error?.message || err?.message || 'Failed to load due cards');
+      }
     } finally {
       setLoading(false);
     }
@@ -72,6 +127,75 @@ export function FlashcardPage() {
   useEffect(() => {
     fetchDueCards();
   }, [fetchDueCards]);
+
+  useEffect(() => {
+    // Initial count of pending offline reviews
+    getQueuedReviewsCount().then(setPendingQueueCount).catch(() => {});
+
+    const handleOnline = async () => {
+      setIsOnline(true);
+      const count = await getQueuedReviewsCount();
+      if (count > 0) {
+        const result = await syncOfflineReviews();
+        const remaining = await getQueuedReviewsCount();
+        setPendingQueueCount(remaining);
+        if (result.synced > 0) {
+          setSyncFeedback(`Online: Synced ${result.synced} offline review${result.synced > 1 ? 's' : ''}.`);
+        }
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setIsOfflineMode(true);
+    };
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleManualSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncFeedback(null);
+    try {
+      const result = await syncOfflineReviews();
+      const remaining = await getQueuedReviewsCount();
+      setPendingQueueCount(remaining);
+      if (result.synced > 0) {
+        setSyncFeedback(`Synced ${result.synced} offline review${result.synced > 1 ? 's' : ''}!`);
+      } else if (result.failed > 0) {
+        setSyncFeedback('Sync failed. Please verify your connection.');
+      } else {
+        setSyncFeedback('All reviews are already up to date.');
+      }
+    } catch {
+      setSyncFeedback('Sync failed. Please try again.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    if (choiceResult && choiceResult.outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const currentCard = cards[currentIndex];
   const totalCards = cards.length;
@@ -85,7 +209,33 @@ export function FlashcardPage() {
 
     setSubmitting(true);
     setLastReviewFeedback(null);
+    const cardId = currentCard.occurrenceId || currentCard.id;
 
+    // Offline mode: queue review locally and advance smoothly
+    if (isOfflineMode || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      try {
+        await queueOfflineReview(cardId, remembered);
+        const count = await getQueuedReviewsCount();
+        setPendingQueueCount(count);
+        setReviewedCount((prev) => prev + 1);
+        setLastReviewFeedback('Saved offline. Will sync when back online.');
+
+        setIsFlipped(false);
+        setShowClip(false);
+        if (currentIndex + 1 < totalCards) {
+          setCurrentIndex((prev) => prev + 1);
+        } else {
+          setSessionCompleted(true);
+        }
+      } catch (err: any) {
+        setError('Failed to save offline review');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Online mode: attempt API record
     try {
       const result = await reviewApi.recordResult(currentCard.id, remembered);
       setReviewedCount((prev) => prev + 1);
@@ -103,7 +253,25 @@ export function FlashcardPage() {
         setSessionCompleted(true);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.error?.message || 'Failed to record review result');
+      // If network fails during review, gracefully queue offline instead of blocking the user
+      try {
+        await queueOfflineReview(cardId, remembered);
+        const count = await getQueuedReviewsCount();
+        setPendingQueueCount(count);
+        setIsOfflineMode(true);
+        setReviewedCount((prev) => prev + 1);
+        setLastReviewFeedback('Network error. Saved offline and will sync when back online.');
+
+        setIsFlipped(false);
+        setShowClip(false);
+        if (currentIndex + 1 < totalCards) {
+          setCurrentIndex((prev) => prev + 1);
+        } else {
+          setSessionCompleted(true);
+        }
+      } catch {
+        setError(err?.response?.data?.error?.message || 'Failed to record review result');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -175,9 +343,19 @@ export function FlashcardPage() {
             </Title>
             <Text c="dimmed" size="sm">
               {sessionCompleted
-                ? `You reviewed ${reviewedCount} card${reviewedCount > 1 ? 's' : ''} in this session. Spaced repetition schedule has been updated.`
+                ? `You reviewed ${reviewedCount} card${reviewedCount > 1 ? 's' : ''} in this session.${
+                    pendingQueueCount > 0
+                      ? ` ${pendingQueueCount} review(s) are queued offline and will sync when you are back online.`
+                      : ' Spaced repetition schedule has been updated.'
+                  }`
                 : 'You have no flashcards due for review right now. Add new vocabulary while reading or explore your saved list.'}
             </Text>
+
+            {pendingQueueCount > 0 && (
+              <Badge color="orange" variant="light" size="md" leftSection={<IconCloudUpload size="0.85rem" />}>
+                {pendingQueueCount} review{pendingQueueCount > 1 ? 's' : ''} pending sync
+              </Badge>
+            )}
 
             <Group gap="md" mt="md">
               <Button variant="default" onClick={() => navigate('/vocabulary')}>
@@ -193,6 +371,18 @@ export function FlashcardPage() {
               >
                 Check Again
               </Button>
+              {pendingQueueCount > 0 && (
+                <Button
+                  variant="filled"
+                  color="blue"
+                  leftSection={<IconCloudUpload size="1rem" />}
+                  onClick={handleManualSync}
+                  loading={syncing}
+                  disabled={!isOnline}
+                >
+                  Sync Offline Reviews
+                </Button>
+              )}
             </Group>
           </Stack>
         </Card>
@@ -205,8 +395,64 @@ export function FlashcardPage() {
 
   return (
     <Stack gap="xl" align="center" style={{ width: '100%' }}>
-      {/* Header and Progress */}
+      {/* Offline and Status Bar */}
       <Box w="100%" maw={640}>
+        <Group justify="space-between" align="center" wrap="wrap" gap="xs" mb="xs">
+          <Group gap="xs">
+            {isOfflineMode && (
+              <Badge color="orange" variant="light" size="sm" leftSection={<IconWifiOff size="0.8rem" />}>
+                Offline Mode (Using cached cards)
+              </Badge>
+            )}
+            {pendingQueueCount > 0 && (
+              <Badge color="blue" variant="outline" size="sm" leftSection={<IconCloudUpload size="0.8rem" />}>
+                {pendingQueueCount} review{pendingQueueCount > 1 ? 's' : ''} pending sync
+              </Badge>
+            )}
+          </Group>
+
+          <Group gap="xs">
+            {pendingQueueCount > 0 && (
+              <Button
+                size="xs"
+                variant="light"
+                color="blue"
+                leftSection={<IconCloudUpload size="0.8rem" />}
+                onClick={handleManualSync}
+                loading={syncing}
+                disabled={!isOnline}
+              >
+                Sync now
+              </Button>
+            )}
+
+            {deferredPrompt && (
+              <Button
+                size="xs"
+                variant="default"
+                leftSection={<IconDownload size="0.8rem" />}
+                onClick={handleInstallClick}
+              >
+                Install App
+              </Button>
+            )}
+          </Group>
+        </Group>
+
+        {syncFeedback && (
+          <Alert
+            color="blue"
+            variant="light"
+            mb="xs"
+            withCloseButton
+            onClose={() => setSyncFeedback(null)}
+            py="xs"
+          >
+            <Text size="xs">{syncFeedback}</Text>
+          </Alert>
+        )}
+
+        {/* Header and Progress */}
         <Group justify="space-between" mb="xs">
           <div>
             <Title order={3}>Flashcard Review</Title>

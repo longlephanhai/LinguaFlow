@@ -4,6 +4,9 @@ import '@mantine/core/styles.css'
 import './index.css'
 import App from './App.tsx'
 import { MantineProvider } from '@mantine/core'
+import { registerServiceWorker } from './lib/pwa'
+
+registerServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
